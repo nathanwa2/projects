@@ -1,105 +1,567 @@
 <!DOCTYPE html>
-  <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Auto-refresh every 5 minutes — picks up GitHub Pages updates automatically -->
-    <meta http-equiv="refresh" content="300" />
-    <title>Nathan // Command Center</title>
-    <style>
-      :root {
-        --bg:        #020a14;
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Auto-refresh every 5 minutes — picks up GitHub Pages updates automatically -->
+  <meta http-equiv="refresh" content="300" />
+  <title>Nathan // Command Center</title>
+  <style>
+    :root {
+      --bg:        #020a14;
       --panel:     rgba(0, 18, 36, 0.72);
       --border:    rgba(0, 212, 255, 0.18);
       --cyan:      #00d4ff;
       --cyan-dim:  rgba(0, 212, 255, 0.12);
       --orange:    #ff7800;
-              --orange-dim:rgba(255, 120, 0, 0.12);
+      --orange-dim:rgba(255, 120, 0, 0.12);
       --green:     #00ff99;
       --green-dim: rgba(0, 255, 153, 0.1);
       --text:      #d8f0ff;
-              --muted:     #4a7a99;
+      --muted:     #4a7a99;
       --dim:       #1a3a52;
-}
+    }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-            background: var(--bg);
+      background: var(--bg);
       color: var(--text);
       font-family: "Courier New", "Menlo", "Consolas", monospace;
       min-height: 100vh;
       overflow: hidden;
       user-select: none;
-}
+    }
 
+    /* ── SCAN LINE ANIMATION ── */
     body::after {
-            content: "";
+      content: "";
       position: fixed;
       inset: 0;
-      background: linear-gradient(to bottom, transparent 0%, rgba(0, 212, 255, 0.025) 50%, transparent 100%);
+      background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        rgba(0, 212, 255, 0.025) 50%,
+        transparent 100%
+      );
       background-size: 100% 6px;
       pointer-events: none;
       z-index: 1000;
       animation: scan 8s linear infinite;
-}
+    }
 
     @keyframes scan {
-            0%   { background-position: 0 -100vh; }
+      0%   { background-position: 0 -100vh; }
       100% { background-position: 0 100vh; }
-}
+    }
 
+    /* ── HEX GRID BACKGROUND ── */
     body::before {
-            content: "";
+      content: "";
       position: fixed;
       inset: 0;
-      background-image: linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-image:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
       background-size: 44px 44px;
       pointer-events: none;
       z-index: 0;
-}
+    }
 
-    .shell { position: relative; z-index: 1; display: grid; grid-template-rows: auto 1fr auto; min-height: 100vh; padding: 20px 28px; gap: 18px; }
-    .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
-    .header-left { display: flex; align-items: baseline; gap: 16px; }
-    .identity { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.22em; color: var(--cyan); text-shadow: 0 0 22px rgba(0,212,255,0.6); }
-    .identity-sub { font-size: 0.72rem; letter-spacing: 0.28em; color: var(--muted); text-transform: uppercase; }
-          .header-right { display: flex; align-items: center; gap: 32px; }
-    .clock { font-size: 2.4rem; font-weight: 700; letter-spacing: 0.06em; color: var(--text); text-shadow: 0 0 16px rgba(0,212,255,0.3); }
-    .date-block { text-align: right; }
-    .date-day { font-size: 0.72rem; letter-spacing: 0.22em; color: var(--cyan); text-transform: uppercase; }
-    .date-full { font-size: 0.85rem; color: var(--muted); letter-spacing: 0.1em; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulse-dot 2s ease-in-out infinite; flex-shrink: 0; }
-    @keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7); } }
+    .shell {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 100vh;
+      padding: 20px 28px;
+      gap: 18px;
+    }
 
-    .projects { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-    .project-card { position: relative; padding: 20px; border: 1px solid var(--border); border-radius: 4px; background: var(--panel); overflow: hidden; display: flex; flex-direction: column; gap: 12px; }
-    .project-card::before, .project-card::after { content: ""; position: absolute; width: 12px; height: 12px; }
-    .project-card::before { top: -1px; left: -1px; border-top: 2px solid var(--accent-color, var(--cyan)); border-left: 2px solid var(--accent-color, var(--cyan)); }
-    .project-card::after { bottom: -1px; right: -1px; border-bottom: 2px solid var(--accent-color, var(--cyan)); border-right: 2px solid var(--accent-color, var(--cyan)); }
-    .project-card.priority-high { --accent-color: var(--orange); border-color: rgba(255,120,0,0.22); background: rgba(30,12,0,0.5); }
-          .project-card.priority-active { --accent-color: var(--cyan); }
-    .project-card.priority-building { --accent-color: #a259ff; border-color: rgba(162,89,255,0.2); background: rgba(20,8,40,0.5); }
-                .project-card.priority-fun { --accent-color: var(--green); border-color: rgba(0,255,153,0.16); background: rgba(0,20,12,0.5); }
-    .card-glow { position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent-color, var(--cyan)); box-shadow: 0 0 18px 2px var(--accent-color, var(--cyan)); }
-    .card-label { font-size: 0.62rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--accent-color, var(--cyan)); }
-    .card-title { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.06em; line-height: 1.2; color: var(--text); }
-    .card-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.55; flex: 1; }
-    .card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-    .tag { font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; padding: 3px 8px; border: 1px solid rgba(255,255,255,0.08); border-radius: 2px; color: var(--muted); }
-    .card-status { display: flex; align-items: center; gap: 7px; font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-color, var(--cyan)); }
-    .card-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-color, var(--cyan)); box-shadow: 0 0 8px var(--accent-color, var(--cyan)); animation: pulse-dot 1.8s ease-in-out infinite; }
-    .card-bar { height: 2px; background: rgba(255,255,255,0.06); border-radius: 1px; overflow: hidden; }
-    .card-bar-fill { height: 100%; background: var(--accent-color, var(--cyan)); box-shadow: 0 0 8px var(--accent-color, var(--cyan)); border-radius: 1px; }
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 14px;
+    }
 
-    .bottombar { display: flex; align-items: center; border-top: 1px solid var(--border); padding-top: 14px; }
-    .life-item { display: flex; align-items: center; gap: 10px; padding: 0 24px; border-right: 1px solid var(--border); }
+    .header-left {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+    }
+
+    .identity {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      color: var(--cyan);
+      text-shadow: 0 0 22px rgba(0,212,255,0.6);
+    }
+
+    .identity-sub {
+      font-size: 0.72rem;
+      letter-spacing: 0.28em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .clock {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--text);
+      text-shadow: 0 0 16px rgba(0,212,255,0.3);
+    }
+
+    .date-block {
+      text-align: right;
+    }
+
+    .date-day {
+      font-size: 0.72rem;
+      letter-spacing: 0.22em;
+      color: var(--cyan);
+      text-transform: uppercase;
+    }
+
+    .date-full {
+      font-size: 0.85rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 10px var(--green);
+      animation: pulse-dot 2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    /* ── PROJECTS GRID ── */
+    .projects {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .project-card {
+      position: relative;
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--panel);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color 0.3s;
+    }
+
+    /* Corner decorations */
+    .project-card::before,
+    .project-card::after {
+      content: "";
+      position: absolute;
+      width: 12px; height: 12px;
+    }
+    .project-card::before {
+      top: -1px; left: -1px;
+      border-top: 2px solid var(--accent-color, var(--cyan));
+      border-left: 2px solid var(--accent-color, var(--cyan));
+    }
+    .project-card::after {
+      bottom: -1px; right: -1px;
+      border-bottom: 2px solid var(--accent-color, var(--cyan));
+      border-right: 2px solid var(--accent-color, var(--cyan));
+    }
+
+    .project-card.priority-high {
+      --accent-color: var(--orange);
+      border-color: rgba(255,120,0,0.22);
+      background: rgba(30,12,0,0.5);
+    }
+
+    .project-card.priority-active {
+      --accent-color: var(--cyan);
+    }
+
+    .project-card.priority-building {
+      --accent-color: #a259ff;
+      border-color: rgba(162,89,255,0.2);
+      background: rgba(20,8,40,0.5);
+    }
+
+    .project-card.priority-fun {
+      --accent-color: var(--green);
+      border-color: rgba(0,255,153,0.16);
+      background: rgba(0,20,12,0.5);
+    }
+
+    /* Glow strip at top of card */
+    .card-glow {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent-color, var(--cyan));
+      box-shadow: 0 0 18px 2px var(--accent-color, var(--cyan));
+    }
+
+    .card-label {
+      font-size: 0.62rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--accent-color, var(--cyan));
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      line-height: 1.2;
+      color: var(--text);
+    }
+
+    .card-desc {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.55;
+      letter-spacing: 0.02em;
+      flex: 1;
+    }
+
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 2px;
+      color: var(--muted);
+    }
+
+    .card-status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.7rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent-color, var(--cyan));
+    }
+
+    .card-status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent-color, var(--cyan));
+      box-shadow: 0 0 8px var(--accent-color, var(--cyan));
+      animation: pulse-dot 1.8s ease-in-out infinite;
+    }
+
+    /* Progress bar */
+    .card-bar {
+      height: 2px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 1px;
+      overflow: hidden;
+    }
+    .card-bar-fill {
+      height: 100%;
+      background: var(--accent-color, var(--cyan));
+      box-shadow: 0 0 8px var(--accent-color, var(--cyan));
+      border-radius: 1px;
+      transition: width 1.5s ease;
+    }
+
+    /* ── BOTTOM BAR ── */
+    .bottombar {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+
+    .life-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 24px;
+      border-right: 1px solid var(--border);
+    }
+
     .life-item:first-child { padding-left: 0; }
-    .life-item:last-child { border-right: none; }
-    .life-icon { font-size: 1.1rem; }
-    .life-name { font-size: 0.68rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); }
-    .life-status { font-size: 0.72rem; letter-spacing: 0.12em; font-weight: 700; }
-    .life-status.active { color: var(--green); text-shadow: 0 0 10px var(--green); }
-    .life-status.paused { color: var(--orange); }
-    .life-status.new { color: #a259ff; text-shadow: 0 0 10px #a259ff; }
-        .life-status.tonight { color: var(--cyan); text-shadow: 0 0 10p
+    .life-item:last-child  { border-right: none; }
+
+    .life-icon {
+      font-size: 1.1rem;
+    }
+
+    .life-name {
+      font-size: 0.68rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .life-status {
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+    }
+
+    .life-status.active  { color: var(--green); text-shadow: 0 0 10px var(--green); }
+    .life-status.paused  { color: var(--orange); }
+    .life-status.new     { color: #a259ff; text-shadow: 0 0 10px #a259ff; }
+    .life-status.tonight { color: var(--cyan); text-shadow: 0 0 10px var(--cyan); }
+
+    .bottom-right {
+      margin-left: auto;
+      font-size: 0.65rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+
+    /* ── ANIMATED CORNER MARKS ── */
+    .corner {
+      position: fixed;
+      width: 40px; height: 40px;
+      opacity: 0.35;
+    }
+    .corner-tl { top: 12px; left: 12px; border-top: 1px solid var(--cyan); border-left: 1px solid var(--cyan); }
+    .corner-tr { top: 12px; right: 12px; border-top: 1px solid var(--cyan); border-right: 1px solid var(--cyan); }
+    .corner-bl { bottom: 12px; left: 12px; border-bottom: 1px solid var(--cyan); border-left: 1px solid var(--cyan); }
+    .corner-br { bottom: 12px; right: 12px; border-bottom: 1px solid var(--cyan); border-right: 1px solid var(--cyan); }
+
+    /* ── TICKER ── */
+    .ticker-wrap {
+      overflow: hidden;
+      white-space: nowrap;
+      font-size: 0.62rem;
+      letter-spacing: 0.22em;
+      color: var(--dim);
+      text-transform: uppercase;
+      margin-top: -10px;
+    }
+    .ticker-inner {
+      display: inline-block;
+      animation: ticker 28s linear infinite;
+    }
+    @keyframes ticker {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Corner decorations -->
+  <div class="corner corner-tl"></div>
+  <div class="corner corner-tr"></div>
+  <div class="corner corner-bl"></div>
+  <div class="corner corner-br"></div>
+
+  <div class="shell">
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-left">
+        <span class="identity">NATHAN WAILLY</span>
+        <span class="identity-sub">Personal Command Center &nbsp;//&nbsp; v1.0</span>
+      </div>
+      <div class="header-right">
+        <div class="date-block">
+          <div class="date-day" id="date-day"></div>
+          <div class="date-full" id="date-full"></div>
+        </div>
+        <div class="clock" id="clock">00:00:00</div>
+        <div class="status-dot"></div>
+      </div>
+    </header>
+
+    <!-- PROJECTS -->
+    <section class="projects">
+
+      <!-- 1. TONY STARK ROOM -->
+      <div class="project-card priority-fun">
+        <div class="card-glow"></div>
+        <div class="card-label">Project 01 &nbsp;·&nbsp; Personal</div>
+        <div class="card-title">Tony Stark<br>Room Build</div>
+        <div class="card-desc">
+          Transform the room into a hi-tech setup. Smart lights, wall displays, ambient tech — full JARVIS energy.
+        </div>
+        <div class="card-bar"><div class="card-bar-fill" style="width: 15%"></div></div>
+        <div class="card-tags">
+          <span class="tag">Smart Home</span>
+          <span class="tag">Display</span>
+          <span class="tag">Ambient</span>
+        </div>
+        <div class="card-status">
+          <div class="card-status-dot"></div>
+          Planning phase
+        </div>
+      </div>
+
+      <!-- 2. CARERIX INTERNSHIP -->
+      <div class="project-card priority-active">
+        <div class="card-glow"></div>
+        <div class="card-label">Project 02 &nbsp;·&nbsp; Internship</div>
+        <div class="card-title">Carerix<br>Extensions</div>
+        <div class="card-desc">
+          Building optimizations and extensions for Carerix recruitment software. Real product, real impact.
+        </div>
+        <div class="card-bar"><div class="card-bar-fill" style="width: 35%"></div></div>
+        <div class="card-tags">
+          <span class="tag">Software</span>
+          <span class="tag">Dev</span>
+          <span class="tag">Stage</span>
+        </div>
+        <div class="card-status">
+          <div class="card-status-dot"></div>
+          In progress
+        </div>
+      </div>
+
+      <!-- 3. SCHOOL MARKETING -->
+      <div class="project-card priority-high">
+        <div class="card-glow"></div>
+        <div class="card-label">Project 03 &nbsp;·&nbsp; School</div>
+        <div class="card-title">Marketing<br>Officer</div>
+        <div class="card-desc">
+          Brand identity work for school. Designs, visual language, campaigns. Blocker: core identity still undefined.
+        </div>
+        <div class="card-bar"><div class="card-bar-fill" style="width: 20%"></div></div>
+        <div class="card-tags">
+          <span class="tag">Design</span>
+          <span class="tag">Brand</span>
+          <span class="tag">Claude</span>
+        </div>
+        <div class="card-status">
+          <div class="card-status-dot"></div>
+          Needs attention
+        </div>
+      </div>
+
+      <!-- 4. BRACELET BUSINESS -->
+      <div class="project-card priority-building">
+        <div class="card-glow"></div>
+        <div class="card-label">Project 04 &nbsp;·&nbsp; Business</div>
+        <div class="card-title">Bracelet<br>Business</div>
+        <div class="card-desc">
+          School startup selling bracelets. Product is ready. Blocker: regulations and legal rules slowing launch.
+        </div>
+        <div class="card-bar"><div class="card-bar-fill" style="width: 45%"></div></div>
+        <div class="card-tags">
+          <span class="tag">Startup</span>
+          <span class="tag">Sales</span>
+          <span class="tag">Blocked</span>
+        </div>
+        <div class="card-status">
+          <div class="card-status-dot"></div>
+          Pre-launch
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TICKER -->
+    <div class="ticker-wrap">
+      <div class="ticker-inner">
+        CARERIX DEV &nbsp;·&nbsp; BRACELET LAUNCH PREP &nbsp;·&nbsp; SCHOOL MARKETING &nbsp;·&nbsp; TONY STARK ROOM &nbsp;·&nbsp; JIU-JITSU BOOTCAMP &nbsp;·&nbsp; PADEL SESSIONS &nbsp;·&nbsp; CASTLE PARTY TONIGHT &nbsp;·&nbsp; BENCH GOAL: 110KG &nbsp;·&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        CARERIX DEV &nbsp;·&nbsp; BRACELET LAUNCH PREP &nbsp;·&nbsp; SCHOOL MARKETING &nbsp;·&nbsp; TONY STARK ROOM &nbsp;·&nbsp; JIU-JITSU BOOTCAMP &nbsp;·&nbsp; PADEL SESSIONS &nbsp;·&nbsp; CASTLE PARTY TONIGHT &nbsp;·&nbsp; BENCH GOAL: 110KG &nbsp;·&nbsp;
+      </div>
+    </div>
+
+    <!-- BOTTOM BAR -->
+    <footer class="bottombar">
+
+      <div class="life-item">
+        <span class="life-icon">🥋</span>
+        <div>
+          <div class="life-name">Jiu-Jitsu</div>
+          <div class="life-status new">Bootcamp</div>
+        </div>
+      </div>
+
+      <div class="life-item">
+        <span class="life-icon">🎾</span>
+        <div>
+          <div class="life-name">Padel</div>
+          <div class="life-status active">Active</div>
+        </div>
+      </div>
+
+      <div class="life-item">
+        <span class="life-icon">🏋️</span>
+        <div>
+          <div class="life-name">Gym / 110kg bench</div>
+          <div class="life-status paused">Paused</div>
+        </div>
+      </div>
+
+      <div class="life-item">
+        <span class="life-icon">⚽</span>
+        <div>
+          <div class="life-name">Football</div>
+          <div class="life-status tonight">Match Tomorrow</div>
+        </div>
+      </div>
+
+      <div class="life-item">
+        <span class="life-icon">🏰</span>
+        <div>
+          <div class="life-name">Castle Party</div>
+          <div class="life-status tonight">Tomorrow Night</div>
+        </div>
+      </div>
+
+      <div class="bottom-right">System online &nbsp;·&nbsp; Local build &nbsp;·&nbsp; No cloud</div>
+
+    </footer>
+
+  </div>
+
+  <script>
+    function pad(n) { return String(n).padStart(2, "0"); }
+
+    function tick() {
+      const now = new Date();
+      const h = pad(now.getHours());
+      const m = pad(now.getMinutes());
+      const s = pad(now.getSeconds());
+      document.getElementById("clock").textContent = `${h}:${m}:${s}`;
+
+      const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      document.getElementById("date-day").textContent = days[now.getDay()].toUpperCase();
+      document.getElementById("date-full").textContent =
+        `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+    }
+
+    tick();
+    setInterval(tick, 1000);
+  </script>
+</body>
+</html>
