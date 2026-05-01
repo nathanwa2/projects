@@ -488,9 +488,9 @@
 
     <!-- TICKER -->
     <div class="ticker-wrap">
-      <div class="ticker-inner">
-        CARERIX DEV &nbsp;·&nbsp; BRACELET LAUNCH PREP &nbsp;·&nbsp; SCHOOL MARKETING &nbsp;·&nbsp; TONY STARK ROOM &nbsp;·&nbsp; JIU-JITSU BOOTCAMP &nbsp;·&nbsp; PADEL SESSIONS &nbsp;·&nbsp; CASTLE PARTY TONIGHT &nbsp;·&nbsp; BENCH GOAL: 110KG &nbsp;·&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        CARERIX DEV &nbsp;·&nbsp; BRACELET LAUNCH PREP &nbsp;·&nbsp; SCHOOL MARKETING &nbsp;·&nbsp; TONY STARK ROOM &nbsp;·&nbsp; JIU-JITSU BOOTCAMP &nbsp;·&nbsp; PADEL SESSIONS &nbsp;·&nbsp; CASTLE PARTY TONIGHT &nbsp;·&nbsp; BENCH GOAL: 110KG &nbsp;·&nbsp;
+      <div class="ticker-inner" id="ticker-inner">
+        CARERIX DEV &nbsp;·&nbsp; BRACELET LAUNCH PREP &nbsp;·&nbsp; SCHOOL MARKETING &nbsp;·&nbsp; TONY STARK ROOM &nbsp;·&nbsp; JIU-JITSU BOOTCAMP &nbsp;·&nbsp; PADEL SESSIONS &nbsp;·&nbsp; FOOTBALL MATCH TOMORROW &nbsp;·&nbsp; CASTLE PARTY TOMORROW NIGHT &nbsp;·&nbsp; BENCH GOAL: 110KG &nbsp;·&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        CARERIX DEV &nbsp;·&nbsp; BRACELET LAUNCH PREP &nbsp;·&nbsp; SCHOOL MARKETING &nbsp;·&nbsp; TONY STARK ROOM &nbsp;·&nbsp; JIU-JITSU BOOTCAMP &nbsp;·&nbsp; PADEL SESSIONS &nbsp;·&nbsp; FOOTBALL MATCH TOMORROW &nbsp;·&nbsp; CASTLE PARTY TOMORROW NIGHT &nbsp;·&nbsp; BENCH GOAL: 110KG &nbsp;·&nbsp;
       </div>
     </div>
 
@@ -525,7 +525,7 @@
         <span class="life-icon">⚽</span>
         <div>
           <div class="life-name">Football</div>
-          <div class="life-status tonight">Match Tomorrow</div>
+          <div class="life-status tonight" id="football-status">Match Tomorrow</div>
         </div>
       </div>
 
@@ -533,7 +533,7 @@
         <span class="life-icon">🏰</span>
         <div>
           <div class="life-name">Castle Party</div>
-          <div class="life-status tonight">Tomorrow Night</div>
+          <div class="life-status tonight" id="castle-status">Tomorrow Night</div>
         </div>
       </div>
 
@@ -562,6 +562,35 @@
 
     tick();
     setInterval(tick, 1000);
+
+    // Dynamic labels for Saturday events
+    function updateEventLabels() {
+      const day = new Date().getDay(); // 5 = Friday, 6 = Saturday
+      const football = document.getElementById("football-status");
+      const castle   = document.getElementById("castle-status");
+
+      if (day === 6) {
+        // Saturday — events are today/tonight
+        football.textContent = "Match Tonight";
+        castle.textContent   = "Tonight!";
+        const ticker = document.getElementById("ticker-inner");
+        if (ticker) {
+          ticker.innerHTML = ticker.innerHTML
+            .replace(/FOOTBALL MATCH TOMORROW/g, "FOOTBALL MATCH TONIGHT")
+            .replace(/CASTLE PARTY TOMORROW NIGHT/g, "CASTLE PARTY TONIGHT");
+        }
+      } else if (day === 5) {
+        // Friday — events are tomorrow
+        football.textContent = "Match Tomorrow";
+        castle.textContent   = "Tomorrow Night";
+      } else {
+        // Other days — show generic upcoming
+        football.textContent = "Upcoming";
+        castle.textContent   = "Upcoming";
+      }
+    }
+
+    updateEventLabels();
   </script>
 </body>
 </html>
