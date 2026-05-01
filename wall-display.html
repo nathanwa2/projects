@@ -355,23 +355,22 @@
     .corner-bl { bottom: 12px; left: 12px; border-bottom: 1px solid var(--cyan); border-left: 1px solid var(--cyan); }
     .corner-br { bottom: 12px; right: 12px; border-bottom: 1px solid var(--cyan); border-right: 1px solid var(--cyan); }
 
-    /* ── TICKER ── */
-    .ticker-wrap {
-      overflow: hidden;
-      white-space: nowrap;
-      font-size: 0.62rem;
-      letter-spacing: 0.22em;
-      color: var(--dim);
-      text-transform: uppercase;
+    /* ── AUDIO VISUALIZER ── */
+    .viz-wrap {
       margin-top: -10px;
     }
-    .ticker-inner {
-      display: inline-block;
-      animation: ticker 28s linear infinite;
+    .viz-label {
+      font-size: 0.52rem;
+      letter-spacing: 0.26em;
+      color: var(--dim);
+      text-transform: uppercase;
+      margin-bottom: 5px;
     }
-    @keyframes ticker {
-      0%   { transform: translateX(0); }
-      100% { transform: translateX(-50%); }
+    .viz-canvas {
+      width: 100%;
+      height: 48px;
+      display: block;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -486,12 +485,10 @@
 
     </section>
 
-    <!-- TICKER -->
-    <div class="ticker-wrap">
-      <div class="ticker-inner" id="ticker-inner">
-        CARERIX DEV &nbsp;·&nbsp; BRACELET LAUNCH PREP &nbsp;·&nbsp; SCHOOL MARKETING &nbsp;·&nbsp; TONY STARK ROOM &nbsp;·&nbsp; JIU-JITSU BOOTCAMP &nbsp;·&nbsp; PADEL SESSIONS &nbsp;·&nbsp; FOOTBALL MATCH TOMORROW &nbsp;·&nbsp; CASTLE PARTY TOMORROW NIGHT &nbsp;·&nbsp; BENCH GOAL: 110KG &nbsp;·&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        CARERIX DEV &nbsp;·&nbsp; BRACELET LAUNCH PREP &nbsp;·&nbsp; SCHOOL MARKETING &nbsp;·&nbsp; TONY STARK ROOM &nbsp;·&nbsp; JIU-JITSU BOOTCAMP &nbsp;·&nbsp; PADEL SESSIONS &nbsp;·&nbsp; FOOTBALL MATCH TOMORROW &nbsp;·&nbsp; CASTLE PARTY TOMORROW NIGHT &nbsp;·&nbsp; BENCH GOAL: 110KG &nbsp;·&nbsp;
-      </div>
+    <!-- AUDIO VISUALIZER -->
+    <div class="viz-wrap">
+      <div class="viz-label">AMBIENT AUDIO &nbsp;//&nbsp; <span id="viz-status">CLICK TO ACTIVATE</span></div>
+      <canvas id="viz-canvas" class="viz-canvas"></canvas>
     </div>
 
     <!-- BOTTOM BAR -->
@@ -591,6 +588,80 @@
     }
 
     updateEventLabels();
+
+    // ── AUDIO VISUALIZER ──
+    const canvas = document.getElementById("viz-canvas");
+    const statusEl = document.getElementById("viz-status");
+    const ctx = canvas.getContext("2d");
+    let analyser = null, dataArray = null, animId = null;
+    let simPhase = 0;
+
+    function resizeCanvas() {
+      canvas.width  = canvas.offsetWidth * window.devicePixelRatio;
+      canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+    }
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    function drawBars(values, count) {
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+      const barW = (W / count) * 0.7;
+      const gap  = (W / count) * 0.3;
+      for (let i = 0; i < count; i++) {
+        const v = values[i]; // 0..1
+        const barH = Math.max(2, v * H);
+        const x = i * (barW + gap);
+        const alpha = 0.25 + v * 0.7;
+        ctx.fillStyle = `rgba(0,212,255,!{alpha.toFixed(2)})`;
+        ctx.fillRect(x, H - barH, barW, barH);
+      }
+    }
+
+    function simLoop() {
+      simPhase += 0.05;
+      const N = 80;
+      const vals = Array.from({length: N}, (_, i) => {
+        const nx = i / N;
+        const w = Math.sin(simPhase + nx * 9) * 0.22
+                + Math.sin(simPhase * 1.4 + nx * 17) * 0.12
+                + Math.sin(simPhase * 0.6 + nx * 5) * 0.15;
+        const base = 0.08 + (1 - Math.abs(nx - 0.5) * 1.6) * 0.18;
+        return Math.max(0.02, Math.min(1, base + w));
+      });
+      drawBars(vals, N);
+      animId = requestAnimationFrame(simLoop);
+    }
+
+    function liveLoop() {
+      const N = analyser.frequencyBinCount;
+      analyser.getByteFrequencyData(dataArray);
+      const step = Math.floor(N / 80);
+      const vals = Array.from({length: 80}, (_, i) => dataArray[i * step] / 255);
+      drawBars(vals, 80);
+      animId = requestAnimationFrame(liveLoop);
+    }
+
+    async function startMic() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioCtx.createMediaStreamSource(stream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        source.connect(analyser);
+        cancelAnimationFrame(animId);
+        statusEl.textContent = "LIVE";
+        statusEl.style.color = "var(--green)";
+        liveLoop();
+      } catch(e) {
+        statusEl.textContent = "NO MIC ACCESS";
+      }
+    }
+
+    canvas.addEventListener("click", startMic);
+    simLoop();
   </script>
 </body>
 </html>
