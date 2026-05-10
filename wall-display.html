@@ -371,6 +371,9 @@
       height: 48px;
       display: block;
       cursor: pointer;
+      background: rgba(0, 212, 255, 0.04);
+      border: 1px solid rgba(0, 212, 255, 0.12);
+      border-radius: 2px;
     }
   </style>
 </head>
@@ -510,11 +513,11 @@
         </div>
       </div>
 
-      <div class="life-item">
+      <div class="life-item" onclick="window.open('https://nathanwa2.github.io/projects/gym.html','_blank')" style="cursor:pointer;transition:opacity 0.2s" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">
         <span class="life-icon">🏋️</span>
         <div>
           <div class="life-name">Gym / 110kg bench</div>
-          <div class="life-status paused">Paused</div>
+          <div class="life-status active">→ GymOS</div>
         </div>
       </div>
 
@@ -612,8 +615,8 @@
         const v = values[i]; // 0..1
         const barH = Math.max(2, v * H);
         const x = i * (barW + gap);
-        const alpha = 0.25 + v * 0.7;
-        ctx.fillStyle = `rgba(207, 230, 245,!{alpha.toFixed(2)})`;
+        const alpha = 0.5 + v * 0.5;
+        ctx.fillStyle = `rgba(0,212,255,${alpha.toFixed(2)})`;
         ctx.fillRect(x, H - barH, barW, barH);
       }
     }
