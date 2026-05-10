@@ -548,7 +548,9 @@ function unlock() {
   ls.classList.add('unlocking');
   setTimeout(()=>{
     ls.style.display='none';
-    document.getElementById('app').classList.add('visible');
+    const app = document.getElementById('app');
+    app.style.display = ''; // clear inline display:none set by doLogout
+    app.classList.add('visible');
     loadHome();
   }, 500);
 }
