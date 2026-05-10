@@ -841,41 +841,14 @@
     }
     window.loSubmit = loSubmit;
 
-    // ── BIOMETRICS ──
+    // ── BIOMETRICS — authenticate only (registration is inside GymOS) ──
     window.loBiometric = async function() {
       const btn    = document.getElementById('lo-bio');
       const scanEl = document.getElementById('lo-scanning');
       const errEl  = document.getElementById('lo-error');
       errEl.textContent='';
-      if(!window.PublicKeyCredential) { errEl.textContent='biometrics not supported'; return; }
-      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
-      if(!available) { errEl.textContent='no sensor — use password'; return; }
       const storedCred = localStorage.getItem(BIO_KEY);
-
-      if(!storedCred) {
-        btn.disabled=true; scanEl.style.display='block';
-        document.getElementById('lo-bio-label').textContent='registering…';
-        try {
-          const cred = await navigator.credentials.create({ publicKey: {
-            challenge: crypto.getRandomValues(new Uint8Array(32)),
-            rp: { name:'GymOS', id: location.hostname },
-            user: { id: new TextEncoder().encode('nathan'), name:'nathan', displayName:'Nathan' },
-            pubKeyCredParams: [{ type:'public-key', alg:-7 },{ type:'public-key', alg:-257 }],
-            authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required' },
-            timeout: 60000
-          }});
-          localStorage.setItem(BIO_KEY, btoa(String.fromCharCode(...new Uint8Array(cred.rawId))));
-          scanEl.style.display='none';
-          document.getElementById('lo-bio-icon').textContent='✓';
-          setTimeout(unlockSite, 500);
-        } catch(e) {
-          scanEl.style.display='none'; btn.disabled=false;
-          document.getElementById('lo-bio-label').textContent='biometric';
-          if(e.name!=='NotAllowedError') errEl.textContent='failed — use password';
-        }
-        return;
-      }
-
+      if(!storedCred) { btn.style.display='none'; return; }
       btn.disabled=true; scanEl.style.display='block';
       try {
         const rawId = Uint8Array.from(atob(storedCred), c=>c.charCodeAt(0));
@@ -895,18 +868,17 @@
       }
     };
 
-    // set bio button label
+    // set bio button label — only show if already registered on this device
     (async ()=>{
-      if(!window.PublicKeyCredential) { document.getElementById('lo-bio').style.display='none'; return; }
-      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
-      if(!available) { document.getElementById('lo-bio').style.display='none'; return; }
+      const bioBtn  = document.getElementById('lo-bio');
       const hasCred = !!localStorage.getItem(BIO_KEY);
-      const isIOS   = /iPhone|iPad/.test(navigator.userAgent);
-      const isMac   = /Mac/.test(navigator.userAgent) && !isIOS;
+      if(!hasCred || !window.PublicKeyCredential) { bioBtn.style.display='none'; return; }
+      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
+      if(!available) { bioBtn.style.display='none'; return; }
+      const isIOS = /iPhone|iPad/.test(navigator.userAgent);
+      const isMac = /Mac/.test(navigator.userAgent) && !isIOS;
       document.getElementById('lo-bio-icon').textContent  = isIOS ? '👤' : isMac ? '☝️' : '🔏';
-      document.getElementById('lo-bio-label').textContent = hasCred
-        ? (isIOS ? 'face / touch id' : isMac ? 'touch id' : 'fingerprint')
-        : 'register biometric';
+      document.getElementById('lo-bio-label').textContent = isIOS ? 'face / touch id' : isMac ? 'touch id' : 'fingerprint';
     })();
   </script>
 </body>

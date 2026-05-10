@@ -294,7 +294,8 @@
       <input type="password" id="new-pw2" placeholder="Confirm new password">
     </div>
     <div class="login-error" id="set-pw-error"></div>
-    <button class="btn btn-cyan" style="margin-top:8px" onclick="confirmSetPassword()">Save</button>
+    <button class="btn btn-cyan" style="margin-top:8px" onclick="confirmSetPassword()">Save Password</button>
+    <button class="btn btn-green" onclick="document.getElementById('set-pw-modal').style.display='none';registerBiometric()" id="reg-bio-btn">Register Biometric This Device</button>
     <button class="btn" style="background:transparent;border:1px solid var(--border);color:var(--dim)" onclick="document.getElementById('set-pw-modal').style.display='none'">Cancel</button>
   </div>
 </div>
@@ -682,20 +683,44 @@ window.tryBiometric = async function() {
   }
 };
 
-// boot
+// boot — hide bio button on login unless already registered on this device
 (async ()=>{
   if(checkSession()) return;
-  if(!window.PublicKeyCredential) { document.getElementById('bio-btn').style.display='none'; return; }
-  const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
-  if(!available) { document.getElementById('bio-btn').style.display='none'; return; }
+  const bioBtn = document.getElementById('bio-btn');
   const hasCred = !!localStorage.getItem(BIO_KEY);
-  const isIOS   = /iPhone|iPad/.test(navigator.userAgent);
-  const isMac   = /Mac/.test(navigator.userAgent) && !isIOS;
+  if(!hasCred || !window.PublicKeyCredential) { bioBtn.style.display='none'; return; }
+  const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
+  if(!available) { bioBtn.style.display='none'; return; }
+  const isIOS = /iPhone|iPad/.test(navigator.userAgent);
+  const isMac = /Mac/.test(navigator.userAgent) && !isIOS;
   document.getElementById('bio-icon').textContent  = isIOS ? '👤' : isMac ? '☝️' : '🔏';
-  document.getElementById('bio-label').textContent = hasCred
-    ? (isIOS ? 'face / touch id' : isMac ? 'touch id' : 'fingerprint')
-    : 'register biometric';
+  document.getElementById('bio-label').textContent = isIOS ? 'face / touch id' : isMac ? 'touch id' : 'fingerprint';
 })();
+
+// register biometric — called from inside the app only
+window.registerBiometric = async function() {
+  if(!window.PublicKeyCredential) { toast('Biometrics not supported','var(--red)'); return; }
+  const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
+  if(!available) { toast('No biometric sensor found','var(--red)'); return; }
+  if(localStorage.getItem(BIO_KEY)) {
+    // already registered — ask to re-register
+    if(!confirm('Biometric already registered on this device. Re-register?')) return;
+  }
+  try {
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp: { name:'GymOS', id: location.hostname },
+      user: { id: new TextEncoder().encode('nathan'), name:'nathan', displayName:'Nathan' },
+      pubKeyCredParams: [{ type:'public-key', alg:-7 },{ type:'public-key', alg:-257 }],
+      authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required' },
+      timeout: 60000
+    }});
+    localStorage.setItem(BIO_KEY, btoa(String.fromCharCode(...new Uint8Array(cred.rawId))));
+    toast('✓ Biometric registered on this device','var(--green)');
+  } catch(e) {
+    if(e.name !== 'NotAllowedError') toast('Registration failed: '+e.message,'var(--red)');
+  }
+};
 
 // ══════════════════════════════════════════════════════
 //  APP
