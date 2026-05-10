@@ -114,6 +114,33 @@
   .unlocking { animation: fadeOut 0.5s ease forwards; }
   @keyframes fadeOut { to { opacity: 0; pointer-events: none; } }
 
+  /* ══ GYM CALENDAR ══ */
+  .cal-month { margin-bottom: 16px; }
+  .cal-month-hdr {
+    font-size: 9px; letter-spacing: 3px; color: var(--cyan);
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  .cal-dow-row {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 3px; margin-bottom: 4px;
+  }
+  .cal-dow {
+    font-size: 8px; color: var(--dim); text-align: center;
+    letter-spacing: 1px;
+  }
+  .cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px;
+  }
+  .cal-day {
+    aspect-ratio: 1; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: var(--dim); background: var(--border);
+  }
+  .cal-day.gym { background: var(--cyan); color: var(--bg); font-weight: bold; }
+  .cal-day.today { outline: 1px solid var(--cyan); }
+  .cal-day.today.gym { outline: 1px solid var(--green); }
+  .cal-day.empty { background: transparent; }
+
   /* ══ MAIN APP ══ */
   #app { display: none; }
   #app.visible { display: block; }
@@ -378,6 +405,8 @@
       </div>
       <div class="section-hdr">Last Session</div>
       <div class="card purple" id="home-last-lift"><div class="loading">Loading…</div></div>
+      <div class="section-hdr">Gym History</div>
+      <div class="card" id="gym-calendar"><div class="loading">Loading…</div></div>
     </div>
 
     <!-- CHECK-IN -->
@@ -881,6 +910,68 @@ async function loadLifts(){
     </div>`;}).join('');
 }
 
+// ── GYM CALENDAR ──
+function renderGymCalendar(ciSet) {
+  const calEl = document.getElementById('gym-calendar');
+  if (!calEl) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = today.toISOString().slice(0,10);
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAYS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+
+  // find earliest check-in date
+  const allDates = [...ciSet].sort();
+  const earliest = allDates[0] ? new Date(allDates[0]) : new Date(today.getFullYear(), today.getMonth()-5, 1);
+
+  // build month range: from earliest month to current month
+  let html = '';
+  let cur = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
+  const endMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const months = [];
+  while (cur <= endMonth) {
+    months.push(new Date(cur));
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  // show most recent first
+  months.reverse();
+
+  for (const monthStart of months) {
+    const y = monthStart.getFullYear(), m = monthStart.getMonth();
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+    // day of week for 1st (0=Sun..6=Sat → convert to Mon-first: 0=Mon..6=Sun)
+    let startDow = monthStart.getDay(); // 0=Sun
+    startDow = startDow === 0 ? 6 : startDow - 1; // convert to Mon=0
+
+    // count gym days this month
+    let gymCount = 0;
+    for (let d=1; d<=daysInMonth; d++) {
+      const ds = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      if (ciSet.has(ds)) gymCount++;
+    }
+
+    html += `<div class="cal-month">
+      <div class="cal-month-hdr">${MONTHS[m]} ${y} <span style="color:var(--dim);font-size:8px">${gymCount} visits</span></div>
+      <div class="cal-dow-row">${DAYS.map(d=>`<div class="cal-dow">${d}</div>`).join('')}</div>
+      <div class="cal-grid">`;
+    // empty cells before 1st
+    for (let i=0; i<startDow; i++) html += `<div class="cal-day empty"></div>`;
+    // day cells
+    for (let d=1; d<=daysInMonth; d++) {
+      const ds = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      const isGym = ciSet.has(ds);
+      const isToday = ds === todayStr;
+      const isFuture = ds > todayStr;
+      let cls = 'cal-day';
+      if (isGym) cls += ' gym';
+      if (isToday) cls += ' today';
+      if (isFuture) cls += ' empty';
+      html += `<div class="${cls}">${isFuture ? '' : d}</div>`;
+    }
+    html += `</div></div>`;
+  }
+  calEl.innerHTML = html || '<div class="empty">No visits yet</div>';
+}
+
 // ── HOME ──
 async function loadHome(){
   try{
@@ -897,6 +988,7 @@ async function loadHome(){
     const d=new Date();d.setDate(d.getDate()-(6-i));const ds=d.toISOString().slice(0,10);
     return`<div class="dot ${ds===today?'today':ciSet.has(ds)?'filled':''}"></div>`;
   }).join('');
+  renderGymCalendar(ciSet);
   // bench — no orderBy so no composite index needed; sort in JS
   const benchSnap=await getDocs(query(collection(db,'lift_logs'),where('exercise','==','Bench Press'),limit(50)));
   const benchDocs=[...benchSnap.docs].sort((a,b)=>b.data().date.localeCompare(a.data().date));
