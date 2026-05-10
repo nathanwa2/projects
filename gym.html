@@ -868,10 +868,11 @@ window.logLift = async function(){
 };
 
 async function loadLifts(){
-  const snap=await getDocs(query(collection(db,'lift_logs'),orderBy('date','desc'),orderBy('ts','desc'),limit(30)));
+  const snap=await getDocs(query(collection(db,'lift_logs'),orderBy('date','desc'),limit(30)));
   const listEl=document.getElementById('lift-list');
   if(snap.empty){listEl.innerHTML='<div class="empty">No lifts yet</div>';return;}
-  listEl.innerHTML=snap.docs.map(d=>{const v=d.data();return`
+  const sorted=[...snap.docs].sort((a,b)=>{const ad=a.data(),bd=b.data();return bd.date.localeCompare(ad.date)||(bd.ts?.seconds||0)-(ad.ts?.seconds||0);});
+  listEl.innerHTML=sorted.map(d=>{const v=d.data();return`
     <div class="log-item">
       <div class="log-item-left">${v.exercise}<div class="log-item-sub">${v.date}${v.notes?' · '+v.notes:''}</div></div>
       <div class="log-item-right" style="color:var(--cyan)">${v.weight_kg} kg<div class="log-item-sub">${v.sets}×${v.reps}</div></div>
@@ -880,6 +881,7 @@ async function loadLifts(){
 
 // ── HOME ──
 async function loadHome(){
+  try{
   const today=todayStr();
   // streak
   const ciSnap=await getDocs(query(collection(db,'check_ins'),orderBy('date','desc')));
@@ -893,10 +895,11 @@ async function loadHome(){
     const d=new Date();d.setDate(d.getDate()-(6-i));const ds=d.toISOString().slice(0,10);
     return`<div class="dot ${ds===today?'today':ciSet.has(ds)?'filled':''}"></div>`;
   }).join('');
-  // bench
-  const benchSnap=await getDocs(query(collection(db,'lift_logs'),where('exercise','==','Bench Press'),orderBy('date','desc'),limit(20)));
+  // bench — no orderBy so no composite index needed; sort in JS
+  const benchSnap=await getDocs(query(collection(db,'lift_logs'),where('exercise','==','Bench Press'),limit(50)));
+  const benchDocs=[...benchSnap.docs].sort((a,b)=>b.data().date.localeCompare(a.data().date));
   let bestBench=0,lastBench=0;
-  benchSnap.docs.forEach((d,i)=>{const v=d.data();if(v.weight_kg>bestBench)bestBench=v.weight_kg;if(i===0)lastBench=v.weight_kg;});
+  benchDocs.forEach((d,i)=>{const v=d.data();if(v.weight_kg>bestBench)bestBench=v.weight_kg;if(i===0)lastBench=v.weight_kg;});
   const benchPct=pct(bestBench,BENCH_GOAL);
   document.getElementById('bench-pct').textContent=benchPct+'%';
   document.getElementById('bench-current').textContent=lastBench||'–';
@@ -909,18 +912,19 @@ async function loadHome(){
   document.getElementById('home-carbs').textContent=Math.round(carbs)+'g';
   document.getElementById('home-fat').textContent=Math.round(fat)+'g';
   document.getElementById('home-kcal-bar').style.width=pct(kcal,KCAL_GOAL)+'%';
-  // last lift
-  const liftSnap=await getDocs(query(collection(db,'lift_logs'),orderBy('date','desc'),orderBy('ts','desc'),limit(5)));
+  // last lift — orderBy single field only, no composite index needed
+  const liftSnap=await getDocs(query(collection(db,'lift_logs'),orderBy('date','desc'),limit(20)));
   const lastLiftEl=document.getElementById('home-last-lift');
   if(liftSnap.empty){lastLiftEl.innerHTML='<div class="empty">No lifts logged yet</div>';return;}
-  const lifts=liftSnap.docs.map(d=>d.data());
+  const lifts=[...liftSnap.docs].map(d=>d.data()).sort((a,b)=>b.date.localeCompare(a.date)||(b.ts?.seconds||0)-(a.ts?.seconds||0));
   const lastDate=lifts[0].date;
   lastLiftEl.innerHTML=`<div class="card-label">${lastDate}</div>`
-    +lifts.filter(l=>l.date===lastDate).map(l=>`
+    +lifts.filter(l=>l.date===lastDate).slice(0,5).map(l=>`
       <div class="log-item">
         <div class="log-item-left">${l.exercise}</div>
         <div class="log-item-right" style="color:var(--purple)">${l.weight_kg}kg ${l.sets}×${l.reps}</div>
       </div>`).join('');
+  }catch(e){console.warn('loadHome error:',e.message);}
 }
 </script>
 </body>
