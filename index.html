@@ -800,6 +800,11 @@
       overlay.classList.remove('hide');
       _realPw=''; document.getElementById('lo-input').value='';
       document.getElementById('lo-error').textContent='';
+      // reset bio button state so Touch ID works again after logout
+      const bioBtn = document.getElementById('lo-bio');
+      bioBtn.disabled = false;
+      document.getElementById('lo-scanning').style.display='none';
+      document.getElementById('lo-bio-icon').textContent = '◈';
     };
 
     // ── SETTINGS INPUTS — star masking ──
