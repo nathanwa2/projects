@@ -38,129 +38,79 @@
     background: var(--bg);
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    z-index: 500; gap: 0;
-    padding: 32px;
+    z-index: 500;
   }
-  .login-logo {
-    font-size: 11px; letter-spacing: 6px; color: var(--dim);
-    text-transform: uppercase; margin-bottom: 8px;
-  }
+
   .login-title {
-    font-size: 36px; font-weight: bold; color: var(--cyan);
-    letter-spacing: 8px; text-transform: uppercase;
-    text-shadow: 0 0 30px rgba(0,212,255,0.5);
-    margin-bottom: 4px;
-  }
-  .login-subtitle {
-    font-size: 9px; letter-spacing: 4px; color: var(--dim);
-    text-transform: uppercase; margin-bottom: 48px;
+    font-size: 48px; font-weight: bold; color: var(--cyan);
+    letter-spacing: 12px; text-transform: uppercase;
+    text-shadow: 0 0 40px rgba(0,212,255,0.4);
+    margin-bottom: 60px;
   }
 
-  /* ring */
-  .login-ring-wrap {
-    position: relative; width: 160px; height: 160px;
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 40px;
+  /* slim bar input */
+  .pw-bar-wrap {
+    width: 260px;
+    border-bottom: 1px solid var(--cyan);
+    display: flex; align-items: center;
+    margin-bottom: 6px;
+    position: relative;
   }
-  .login-ring-wrap svg { position: absolute; top: 0; left: 0; }
-  .ring-spin {
-    animation: spin 4s linear infinite;
-    transform-origin: 80px 80px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .ring-pulse {
-    animation: rpulse 2s ease-in-out infinite;
-    transform-origin: 80px 80px;
-  }
-  @keyframes rpulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
-  .login-ring-icon {
-    font-size: 40px; z-index: 1;
-    filter: drop-shadow(0 0 12px var(--cyan));
-  }
-
-  /* biometric button */
-  .bio-btn {
-    width: 200px; padding: 16px;
-    border: 1px solid var(--cyan);
-    border-radius: 4px;
-    background: rgba(0,212,255,0.05);
-    color: var(--cyan);
-    font-family: inherit; font-size: 11px;
-    letter-spacing: 3px; text-transform: uppercase;
-    cursor: pointer; transition: all 0.2s;
-    margin-bottom: 20px;
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-  }
-  .bio-btn:hover { background: rgba(0,212,255,0.12); box-shadow: 0 0 20px rgba(0,212,255,0.2); }
-  .bio-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .bio-icon { font-size: 20px; }
-
-  /* divider */
-  .login-divider {
-    width: 200px; display: flex; align-items: center; gap: 12px;
-    margin-bottom: 20px;
-  }
-  .login-divider::before, .login-divider::after {
-    content: ''; flex: 1; height: 1px; background: var(--border);
-  }
-  .login-divider span { font-size: 9px; color: var(--dim); letter-spacing: 2px; }
-
-  /* password */
-  .pw-wrap { position: relative; width: 200px; margin-bottom: 12px; }
-  .pw-input {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    color: var(--cyan);
-    font-family: inherit; font-size: 18px;
-    padding: 12px 40px 12px 16px;
+  .pw-bar {
+    flex: 1;
+    background: transparent;
+    border: none;
     outline: none;
-    letter-spacing: 4px;
+    color: var(--cyan);
+    font-family: 'Courier New', monospace;
+    font-size: 22px;
+    letter-spacing: 6px;
     text-align: center;
-    transition: border-color 0.2s;
+    padding: 10px 0;
+    caret-color: var(--cyan);
   }
-  .pw-input:focus { border-color: var(--cyan); box-shadow: 0 0 12px rgba(0,212,255,0.15); }
-  .pw-input.error { border-color: var(--red); animation: shake 0.3s ease; }
+  .pw-bar::placeholder { color: var(--dim); font-size: 14px; letter-spacing: 3px; }
+  .pw-bar.shake { animation: shake 0.3s ease; }
   @keyframes shake {
     0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)}
   }
-  .pw-input.success { border-color: var(--green); }
-
-  .pw-toggle {
-    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-    background: none; border: none; color: var(--dim); cursor: pointer; font-size: 16px;
-    padding: 4px;
-  }
-  .pw-submit {
-    width: 200px; padding: 13px;
-    background: var(--cyan); color: var(--bg);
-    border: none; border-radius: 4px;
-    font-family: inherit; font-size: 11px;
-    font-weight: bold; letter-spacing: 3px;
-    text-transform: uppercase; cursor: pointer;
-    transition: all 0.2s; margin-bottom: 24px;
-  }
-  .pw-submit:hover { opacity: 0.85; }
+  .pw-bar.success { color: var(--green); }
 
   .login-error {
-    font-size: 10px; color: var(--red); letter-spacing: 2px;
-    text-align: center; height: 16px; margin-bottom: 8px;
-  }
-  .login-hint {
-    font-size: 9px; color: var(--dim); letter-spacing: 1px;
-    text-align: center; margin-top: 8px;
+    font-size: 9px; color: var(--red); letter-spacing: 3px;
+    text-align: center; height: 14px; margin-bottom: 32px;
+    text-transform: uppercase;
   }
 
-  /* bio status animation */
+  /* bio button — minimal icon only */
+  .bio-btn {
+    margin-top: 8px;
+    background: none; border: none;
+    color: var(--dim); font-size: 28px;
+    cursor: pointer; transition: all 0.2s;
+    padding: 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .bio-btn:hover { color: var(--cyan); filter: drop-shadow(0 0 8px var(--cyan)); }
+  .bio-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .bio-label { font-size: 8px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
+
   .bio-scanning {
     font-size: 9px; color: var(--cyan); letter-spacing: 3px;
-    text-align: center; margin-bottom: 12px; display: none;
+    text-align: center; margin-top: 8px; display: none;
     animation: pulse 1s infinite;
   }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-  /* unlock animation */
+  /* setup link */
+  .setup-link {
+    position: fixed; bottom: 24px;
+    font-size: 9px; color: var(--border); letter-spacing: 1px;
+    cursor: pointer; transition: color 0.2s;
+    background: none; border: none; font-family: inherit;
+  }
+  .setup-link:hover { color: var(--dim); }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
   .unlocking { animation: fadeOut 0.5s ease forwards; }
   @keyframes fadeOut { to { opacity: 0; pointer-events: none; } }
 
@@ -312,57 +262,24 @@
 
 <!-- ══ LOGIN SCREEN ══ -->
 <div id="login-screen">
-  <div class="login-logo">System v2.0</div>
   <div class="login-title">GymOS</div>
-  <div class="login-subtitle">Biometric Security Active</div>
 
-  <!-- Animated ring -->
-  <div class="login-ring-wrap">
-    <svg width="160" height="160" viewBox="0 0 160 160">
-      <!-- outer static ring -->
-      <circle cx="80" cy="80" r="74" fill="none" stroke="#0d2137" stroke-width="1.5"/>
-      <!-- spinning dashed ring -->
-      <g class="ring-spin">
-        <circle cx="80" cy="80" r="68" fill="none" stroke="#00d4ff" stroke-width="1"
-          stroke-dasharray="12 8" opacity="0.4"/>
-      </g>
-      <!-- pulsing inner ring -->
-      <circle cx="80" cy="80" r="60" fill="none" stroke="#00d4ff" stroke-width="1.5"
-        stroke-dasharray="188" stroke-dashoffset="0" opacity="0.15" class="ring-pulse"/>
-      <!-- solid arcs -->
-      <circle cx="80" cy="80" r="72" fill="none" stroke="#00d4ff" stroke-width="2"
-        stroke-dasharray="60 220" stroke-linecap="round" transform="rotate(-90 80 80)" opacity="0.8"/>
-      <circle cx="80" cy="80" r="72" fill="none" stroke="#00d4ff" stroke-width="2"
-        stroke-dasharray="30 250" stroke-linecap="round" transform="rotate(120 80 80)" opacity="0.5"/>
-    </svg>
-    <span class="login-ring-icon">🏋️</span>
-  </div>
-
-  <!-- Biometric button -->
-  <button class="bio-btn" id="bio-btn" onclick="tryBiometric()">
-    <span class="bio-icon" id="bio-icon">⬡</span>
-    <span id="bio-label">Use Biometrics</span>
-  </button>
-  <div class="bio-scanning" id="bio-scanning">◈ SCANNING ◈</div>
-
-  <!-- Divider -->
-  <div class="login-divider"><span>or</span></div>
-
-  <!-- Password -->
-  <div class="pw-wrap">
-    <input type="password" class="pw-input" id="pw-input" placeholder="· · · · · ·"
-      autocomplete="current-password" onkeydown="if(event.key==='Enter')submitPw()">
-    <button class="pw-toggle" onclick="togglePw()" id="pw-eye">👁</button>
+  <!-- Password bar -->
+  <div class="pw-bar-wrap">
+    <input type="text" class="pw-bar" id="pw-input" placeholder="access code"
+      autocomplete="off" autocorrect="off" spellcheck="false">
   </div>
   <div class="login-error" id="login-error"></div>
-  <button class="pw-submit" onclick="submitPw()">Access</button>
 
-  <div class="login-hint" id="login-hint">First time? Set your password below</div>
-  <div style="margin-top:8px">
-    <button class="btn-outline" style="background:transparent;border:1px solid var(--border);color:var(--dim);font-family:inherit;font-size:9px;letter-spacing:2px;padding:8px 16px;border-radius:4px;cursor:pointer;width:200px" onclick="showSetPassword()">
-      Set / Change Password
-    </button>
-  </div>
+  <!-- Biometric icon -->
+  <button class="bio-btn" id="bio-btn" onclick="tryBiometric()">
+    <span id="bio-icon">⬡</span>
+    <span class="bio-label" id="bio-label">biometric</span>
+  </button>
+  <div class="bio-scanning" id="bio-scanning">◈ scanning ◈</div>
+
+  <!-- Setup (hidden at bottom) -->
+  <button class="setup-link" onclick="showSetPassword()" id="setup-link">set password</button>
 </div>
 
 <!-- Set password modal -->
@@ -630,28 +547,35 @@ function setSession() {
   localStorage.setItem('gymOS_session', Date.now() + 3600000); // 1 hour
 }
 
-// ── PASSWORD ──
+// ── PASSWORD (star masking) ──
+let _realPw = '';
+const pwInput = document.getElementById('pw-input');
+pwInput.addEventListener('keydown', e => {
+  if(e.key === 'Enter') { submitPw(); return; }
+  if(e.key === 'Backspace') { _realPw = _realPw.slice(0,-1); }
+  else if(e.key.length === 1 && !e.ctrlKey && !e.metaKey) { _realPw += e.key; }
+  else return;
+  e.preventDefault();
+  pwInput.value = '*'.repeat(_realPw.length);
+});
+// prevent paste showing real chars
+pwInput.addEventListener('paste', e => { e.preventDefault(); });
+
 window.submitPw = async function() {
-  const pw = document.getElementById('pw-input').value;
   const stored = localStorage.getItem('gymOS_pw');
   const errEl = document.getElementById('login-error');
   errEl.textContent = '';
-  if(!stored) { errEl.textContent = 'Set a password first ↓'; return; }
-  if(!pw) return;
-  const h = await hashPw(pw);
+  if(!stored) { errEl.textContent = 'no password set — tap below'; return; }
+  if(!_realPw) return;
+  const h = await hashPw(_realPw);
   if(h === stored) {
-    document.getElementById('pw-input').classList.add('success');
-    setSession(); setTimeout(unlock, 300);
+    pwInput.classList.add('success');
+    setSession(); setTimeout(unlock, 400);
   } else {
-    document.getElementById('pw-input').classList.add('error');
-    errEl.textContent = 'Access denied';
-    setTimeout(()=>document.getElementById('pw-input').classList.remove('error'), 400);
+    pwInput.classList.add('shake');
+    errEl.textContent = 'access denied';
+    setTimeout(()=>{ pwInput.classList.remove('shake'); _realPw=''; pwInput.value=''; }, 400);
   }
-};
-
-window.togglePw = function() {
-  const inp = document.getElementById('pw-input');
-  inp.type = inp.type==='password' ? 'text' : 'password';
 };
 
 window.showSetPassword = function() {
@@ -666,8 +590,8 @@ window.confirmSetPassword = async function() {
   if(p1 !== p2) { err.textContent="Passwords don't match"; return; }
   localStorage.setItem('gymOS_pw', await hashPw(p1));
   document.getElementById('set-pw-modal').style.display='none';
-  document.getElementById('login-hint').textContent='Password saved ✓';
-  document.getElementById('login-hint').style.color='var(--green)';
+  document.getElementById('setup-link').textContent='password saved ✓';
+  document.getElementById('setup-link').style.color='var(--green)';
   err.textContent='';
   document.getElementById('new-pw1').value='';
   document.getElementById('new-pw2').value='';
@@ -766,10 +690,9 @@ window.tryBiometric = async function() {
   document.getElementById('bio-label').textContent = hasCred
     ? (isIOS ? 'Face ID / Touch ID' : isMac ? 'Touch ID' : 'Fingerprint')
     : 'Register Biometrics';
-  const hint = document.getElementById('login-hint');
   if(!localStorage.getItem('gymOS_pw') && !hasCred) {
-    hint.textContent = 'First time: register biometrics or set a password below';
-  } else { hint.textContent=''; }
+    document.getElementById('setup-link').style.color='var(--dim)';
+  }
 })();
 
 // ══════════════════════════════════════════════════════
