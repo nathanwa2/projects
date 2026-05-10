@@ -278,24 +278,23 @@
   </button>
   <div class="bio-scanning" id="bio-scanning">◈ scanning ◈</div>
 
-  <!-- Setup (hidden at bottom) -->
-  <button class="setup-link" onclick="showSetPassword()" id="setup-link">set password</button>
 </div>
 
-<!-- Set password modal -->
+
+<!-- Change password modal (inside app only) -->
 <div class="modal-overlay" id="set-pw-modal" style="display:none">
   <div class="modal-box">
-    <div class="modal-title">Set Password</div>
+    <div class="modal-title">Change Password</div>
     <div class="input-group">
       <div class="input-label">New Password</div>
-      <input type="password" id="new-pw1" placeholder="Enter password">
+      <input type="password" id="new-pw1" placeholder="Enter new password">
     </div>
     <div class="input-group">
-      <div class="input-label">Confirm Password</div>
-      <input type="password" id="new-pw2" placeholder="Confirm password">
+      <div class="input-label">Confirm</div>
+      <input type="password" id="new-pw2" placeholder="Confirm new password">
     </div>
     <div class="login-error" id="set-pw-error"></div>
-    <button class="btn btn-cyan" style="margin-top:8px" onclick="confirmSetPassword()">Save Password</button>
+    <button class="btn btn-cyan" style="margin-top:8px" onclick="confirmSetPassword()">Save</button>
     <button class="btn" style="background:transparent;border:1px solid var(--border);color:var(--dim)" onclick="document.getElementById('set-pw-modal').style.display='none'">Cancel</button>
   </div>
 </div>
@@ -308,9 +307,12 @@
       <button class="header-back" onclick="window.location.href='https://nathanwa2.github.io/projects/'">⬅ Hub</button>
       <div class="header-title">GymOS</div>
     </div>
-    <div class="header-status">
-      <div class="pulse-dot"></div>
-      <span id="hdr-date">--</span>
+    <div style="display:flex;align-items:center;gap:12px">
+      <button onclick="showSetPassword()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:14px;padding:4px" title="Change password">⚙</button>
+      <div class="header-status">
+        <div class="pulse-dot"></div>
+        <span id="hdr-date">--</span>
+      </div>
     </div>
   </div>
 
@@ -492,7 +494,8 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, Timestamp }
+import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, Timestamp,
+  doc, getDoc, setDoc }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -521,10 +524,21 @@ function toast(msg, col='var(--cyan)') {
 //  AUTH
 // ══════════════════════════════════════════════════════
 
-// Simple password hash (not cryptographic, good enough for personal use)
+const DEFAULT_PW = '123456';
+const AUTH_DOC   = doc(db, 'settings', 'auth'); // password hash synced via Firebase
+
 async function hashPw(pw) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// fetch password hash from Firebase; fall back to default if not set
+async function getStoredHash() {
+  try {
+    const snap = await getDoc(AUTH_DOC);
+    if(snap.exists() && snap.data().pw_hash) return snap.data().pw_hash;
+  } catch(e) { /* offline — fall through to default */ }
+  return await hashPw(DEFAULT_PW);
 }
 
 function unlock() {
@@ -537,17 +551,17 @@ function unlock() {
   }, 500);
 }
 
-// Check if session is still valid (1 hour)
+// session valid 8 hours
 function checkSession() {
   const exp = localStorage.getItem('gymOS_session');
   if(exp && Date.now() < parseInt(exp)) { unlock(); return true; }
   return false;
 }
 function setSession() {
-  localStorage.setItem('gymOS_session', Date.now() + 3600000); // 1 hour
+  localStorage.setItem('gymOS_session', Date.now() + 28800000);
 }
 
-// ── PASSWORD (star masking) ──
+// ── PASSWORD (shows * not dots) ──
 let _realPw = '';
 const pwInput = document.getElementById('pw-input');
 pwInput.addEventListener('keydown', e => {
@@ -558,17 +572,14 @@ pwInput.addEventListener('keydown', e => {
   e.preventDefault();
   pwInput.value = '*'.repeat(_realPw.length);
 });
-// prevent paste showing real chars
-pwInput.addEventListener('paste', e => { e.preventDefault(); });
+pwInput.addEventListener('paste', e => e.preventDefault());
 
 window.submitPw = async function() {
-  const stored = localStorage.getItem('gymOS_pw');
   const errEl = document.getElementById('login-error');
   errEl.textContent = '';
-  if(!stored) { errEl.textContent = 'no password set — tap below'; return; }
   if(!_realPw) return;
-  const h = await hashPw(_realPw);
-  if(h === stored) {
+  const [inputHash, storedHash] = await Promise.all([hashPw(_realPw), getStoredHash()]);
+  if(inputHash === storedHash) {
     pwInput.classList.add('success');
     setSession(); setTimeout(unlock, 400);
   } else {
@@ -578,84 +589,71 @@ window.submitPw = async function() {
   }
 };
 
+// ── CHANGE PASSWORD — saves to Firebase, syncs all devices ──
 window.showSetPassword = function() {
   document.getElementById('set-pw-modal').style.display='flex';
 };
 
 window.confirmSetPassword = async function() {
-  const p1 = document.getElementById('new-pw1').value;
-  const p2 = document.getElementById('new-pw2').value;
+  const p1  = document.getElementById('new-pw1').value;
+  const p2  = document.getElementById('new-pw2').value;
   const err = document.getElementById('set-pw-error');
+  err.textContent='';
   if(!p1) { err.textContent='Enter a password'; return; }
   if(p1 !== p2) { err.textContent="Passwords don't match"; return; }
-  localStorage.setItem('gymOS_pw', await hashPw(p1));
-  document.getElementById('set-pw-modal').style.display='none';
-  document.getElementById('setup-link').textContent='password saved ✓';
-  document.getElementById('setup-link').style.color='var(--green)';
-  err.textContent='';
-  document.getElementById('new-pw1').value='';
-  document.getElementById('new-pw2').value='';
+  try {
+    await setDoc(AUTH_DOC, { pw_hash: await hashPw(p1) }, { merge: true });
+    document.getElementById('set-pw-modal').style.display='none';
+    document.getElementById('new-pw1').value='';
+    document.getElementById('new-pw2').value='';
+    toast('✓ Password updated on all devices','var(--green)');
+  } catch(e) { err.textContent='Save failed: '+e.message; }
 };
 
-// ── BIOMETRICS (WebAuthn) ──
+// ── BIOMETRICS (WebAuthn — per device fast unlock) ──
 const BIO_KEY = 'gymOS_bio_cred';
 
 window.tryBiometric = async function() {
-  const btn = document.getElementById('bio-btn');
+  const btn    = document.getElementById('bio-btn');
   const scanEl = document.getElementById('bio-scanning');
-  const errEl = document.getElementById('login-error');
+  const errEl  = document.getElementById('login-error');
   errEl.textContent='';
-
-  if(!window.PublicKeyCredential) {
-    errEl.textContent='Biometrics not supported on this browser';
-    return;
-  }
-
+  if(!window.PublicKeyCredential) { errEl.textContent='biometrics not supported'; return; }
   const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
-  if(!available) {
-    errEl.textContent='No biometric sensor found — use password';
-    return;
-  }
-
+  if(!available) { errEl.textContent='no sensor — use password'; return; }
   const storedCred = localStorage.getItem(BIO_KEY);
 
-  // REGISTER (first time)
   if(!storedCred) {
+    // first time: register on this device
     btn.disabled=true; scanEl.style.display='block';
-    document.getElementById('bio-label').textContent='Registering…';
+    document.getElementById('bio-label').textContent='registering…';
     try {
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
       const cred = await navigator.credentials.create({ publicKey: {
-        challenge,
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
         rp: { name:'GymOS', id: location.hostname },
         user: { id: new TextEncoder().encode('nathan'), name:'nathan', displayName:'Nathan' },
         pubKeyCredParams: [{ type:'public-key', alg:-7 },{ type:'public-key', alg:-257 }],
         authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required' },
         timeout: 60000
       }});
-      // store credential id
-      const credId = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
-      localStorage.setItem(BIO_KEY, credId);
+      localStorage.setItem(BIO_KEY, btoa(String.fromCharCode(...new Uint8Array(cred.rawId))));
       setSession(); scanEl.style.display='none';
       document.getElementById('bio-icon').textContent='✓';
-      document.getElementById('bio-label').textContent='Biometric registered!';
-      setTimeout(unlock, 600);
+      setTimeout(unlock, 500);
     } catch(e) {
       scanEl.style.display='none'; btn.disabled=false;
-      document.getElementById('bio-label').textContent='Use Biometrics';
-      if(e.name!=='NotAllowedError') errEl.textContent='Registration failed: '+e.message;
+      document.getElementById('bio-label').textContent='biometric';
+      if(e.name!=='NotAllowedError') errEl.textContent='failed — use password';
     }
     return;
   }
 
-  // AUTHENTICATE (subsequent times)
+  // authenticate
   btn.disabled=true; scanEl.style.display='block';
-  document.getElementById('bio-label').textContent='Scanning…';
   try {
-    const challenge = crypto.getRandomValues(new Uint8Array(32));
     const rawId = Uint8Array.from(atob(storedCred), c=>c.charCodeAt(0));
     await navigator.credentials.get({ publicKey: {
-      challenge,
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
       rpId: location.hostname,
       allowCredentials: [{ type:'public-key', id: rawId }],
       userVerification: 'required',
@@ -663,36 +661,26 @@ window.tryBiometric = async function() {
     }});
     setSession(); scanEl.style.display='none';
     document.getElementById('bio-icon').textContent='✓';
-    document.getElementById('bio-label').textContent='Identity confirmed';
     setTimeout(unlock, 400);
   } catch(e) {
     scanEl.style.display='none'; btn.disabled=false;
-    document.getElementById('bio-label').textContent='Use Biometrics';
-    if(e.name!=='NotAllowedError') errEl.textContent='Auth failed — try password';
+    if(e.name!=='NotAllowedError') errEl.textContent='auth failed — use password';
   }
 };
 
-// update bio button label based on state
+// boot
 (async ()=>{
-  if(checkSession()) return; // already logged in
-  const hasCred = !!localStorage.getItem(BIO_KEY);
-  const bioBtn = document.getElementById('bio-btn');
-  const bioIcon = document.getElementById('bio-icon');
-  if(!window.PublicKeyCredential) {
-    bioBtn.style.display='none'; return;
-  }
+  if(checkSession()) return;
+  if(!window.PublicKeyCredential) { document.getElementById('bio-btn').style.display='none'; return; }
   const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
-  if(!available) { bioBtn.style.display='none'; return; }
-  // detect device type for icon
-  const isIOS = /iPhone|iPad/.test(navigator.userAgent);
-  const isMac = /Mac/.test(navigator.userAgent) && !isIOS;
-  bioIcon.textContent = isIOS ? '👤' : isMac ? '☝️' : '🔏';
+  if(!available) { document.getElementById('bio-btn').style.display='none'; return; }
+  const hasCred = !!localStorage.getItem(BIO_KEY);
+  const isIOS   = /iPhone|iPad/.test(navigator.userAgent);
+  const isMac   = /Mac/.test(navigator.userAgent) && !isIOS;
+  document.getElementById('bio-icon').textContent  = isIOS ? '👤' : isMac ? '☝️' : '🔏';
   document.getElementById('bio-label').textContent = hasCred
-    ? (isIOS ? 'Face ID / Touch ID' : isMac ? 'Touch ID' : 'Fingerprint')
-    : 'Register Biometrics';
-  if(!localStorage.getItem('gymOS_pw') && !hasCred) {
-    document.getElementById('setup-link').style.color='var(--dim)';
-  }
+    ? (isIOS ? 'face / touch id' : isMac ? 'touch id' : 'fingerprint')
+    : 'register biometric';
 })();
 
 // ══════════════════════════════════════════════════════
