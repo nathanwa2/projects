@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>GymOS</title>
+<style>
+  :root {
+    --bg: #020a14;
+    --panel: #0a1628;
+    --border: #0d2137;
+    --cyan: #00d4ff;
+    --green: #00ff99;
+    --orange: #ff7800;
+    --purple: #a259ff;
+    --red: #ff3b5c;
+    --text: #c8e0f0;
+    --dim: #4a6a80;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,212,255,0.015) 2px, rgba(0,212,255,0.015) 4px);
+    pointer-events: none; z-index: 9999;
+  }
+
+  /* ══ LOGIN SCREEN ══ */
+  #login-screen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 500;
+  }
+
+  .login-title {
+    font-size: 48px; font-weight: bold; color: var(--cyan);
+    letter-spacing: 12px; text-transform: uppercase;
+    text-shadow: 0 0 40px rgba(0,212,255,0.4);
+    margin-bottom: 60px;
+  }
+
+  /* slim bar input */
+  .pw-bar-wrap {
+    width: 260px;
+    border-bottom: 1px solid var(--cyan);
+    display: flex; align-items: center;
+    margin-bottom: 6px;
+    position: relative;
+  }
+  .pw-bar {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--cyan);
+    font-family: 'Courier New', monospace;
+    font-size: 22px;
+    letter-spacing: 6px;
+    text-align: center;
+    padding: 10px 0;
+    caret-color: var(--cyan);
+  }
+  .pw-bar::placeholder { color: var(--dim); font-size: 14px; letter-spacing: 3px; }
+  .pw-bar.shake { animation: shake 0.3s ease; }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)}
+  }
+  .pw-bar.success { color: var(--green); }
+
+  .login-error {
+    font-size: 9px; color: var(--red); letter-spacing: 3px;
+    text-align: center; height: 14px; margin-bottom: 32px;
+    text-transform: uppercase;
+  }
+
+  /* bio button — minimal icon only */
+  .bio-btn {
+    margin-top: 8px;
+    background: none; border: none;
+    color: var(--dim); font-size: 28px;
+    cursor: pointer; transition: all 0.2s;
+    padding: 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .bio-btn:hover { color: var(--cyan); filter: drop-shadow(0 0 8px var(--cyan)); }
+  .bio-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .bio-label { font-size: 8px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
+
+  .bio-scanning {
+    font-size: 9px; color: var(--cyan); letter-spacing: 3px;
+    text-align: center; margin-top: 8px; display: none;
+    animation: pulse 1s infinite;
+  }
+
+  /* setup link */
+  .setup-link {
+    position: fixed; bottom: 24px;
+    font-size: 9px; color: var(--border); letter-spacing: 1px;
+    cursor: pointer; transition: color 0.2s;
+    background: none; border: none; font-family: inherit;
+  }
+  .setup-link:hover { color: var(--dim); }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .unlocking { animation: fadeOut 0.5s ease forwards; }
+  @keyframes fadeOut { to { opacity: 0; pointer-events: none; } }
+
+  /* ══ MAIN APP ══ */
+  #app { display: none; }
+  #app.visible { display: block; }
+
+  .header {
+    position: fixed; top: 0; left: 0; right: 0; height: 52px;
+    background: rgba(2,10,20,0.95);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; z-index: 100; backdrop-filter: blur(8px);
+  }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .header-back {
+    background: none; border: none; color: var(--dim); cursor: pointer;
+    font-family: inherit; font-size: 10px; letter-spacing: 1px; padding: 4px 8px;
+    border: 1px solid var(--border); border-radius: 3px;
+  }
+  .header-back:hover { color: var(--cyan); border-color: var(--cyan); }
+  .header-title { font-size: 14px; font-weight: bold; color: var(--cyan); letter-spacing: 3px; }
+  .header-status { font-size: 10px; color: var(--green); letter-spacing: 2px; display: flex; align-items: center; gap: 6px; }
+  .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+
+  .nav {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 60px;
+    background: rgba(2,10,20,0.97); border-top: 1px solid var(--border);
+    display: flex; z-index: 100; backdrop-filter: blur(8px);
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; background: none; border: none; cursor: pointer; color: var(--dim);
+    font-size: 10px; font-family: inherit; letter-spacing: 1px; transition: color 0.2s; padding: 0;
+  }
+  .nav-btn span { font-size: 20px; }
+  .nav-btn.active { color: var(--cyan); }
+  .nav-btn.active span { filter: drop-shadow(0 0 6px var(--cyan)); }
+
+  .content { padding: 68px 16px 76px; }
+  .tab { display: none; }
+  .tab.active { display: block; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px; margin-bottom: 12px; position: relative; overflow: hidden;
+  }
+  .card::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: var(--cyan); }
+  .card.green::before { background: var(--green); }
+  .card.orange::before { background: var(--orange); }
+  .card.purple::before { background: var(--purple); }
+
+  .card-label { font-size: 9px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; margin-bottom: 6px; }
+  .card-value { font-size: 28px; font-weight: bold; color: var(--cyan); line-height: 1; }
+  .card.green .card-value { color: var(--green); }
+  .card.orange .card-value { color: var(--orange); }
+  .card-sub { font-size: 10px; color: var(--dim); margin-top: 4px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+
+  .bench-wrap { display: flex; align-items: center; gap: 16px; }
+  .bench-pct { font-size: 32px; font-weight: bold; color: var(--cyan); }
+  .bench-goal-label { font-size: 10px; color: var(--dim); letter-spacing: 1px; }
+
+  .section-hdr {
+    font-size: 9px; letter-spacing: 3px; color: var(--dim); text-transform: uppercase;
+    margin: 16px 0 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-hdr::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .macro-bar-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .macro-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+
+  .input-group { margin-bottom: 10px; }
+  .input-label { font-size: 9px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; margin-bottom: 4px; }
+  input, select {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+    color: var(--text); font-family: inherit; font-size: 14px; padding: 10px 12px;
+    outline: none; transition: border-color 0.2s;
+  }
+  input:focus, select:focus { border-color: var(--cyan); }
+  select option { background: var(--bg); }
+
+  .btn {
+    width: 100%; padding: 13px; border: none; border-radius: 4px; font-family: inherit;
+    font-size: 12px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer; transition: all 0.2s; margin-bottom: 8px;
+  }
+  .btn-cyan { background: var(--cyan); color: var(--bg); }
+  .btn-green { background: var(--green); color: var(--bg); }
+  .btn-orange { background: var(--orange); color: var(--bg); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .log-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .log-item:last-child { border-bottom: none; }
+  .log-item-left { color: var(--text); }
+  .log-item-right { color: var(--dim); text-align: right; }
+  .log-item-sub { font-size: 10px; color: var(--dim); margin-top: 2px; }
+
+  .toast {
+    position: fixed; bottom: 72px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--panel); border: 1px solid var(--cyan); color: var(--cyan);
+    padding: 10px 20px; border-radius: 4px; font-size: 11px; letter-spacing: 1px;
+    opacity: 0; transition: all 0.3s; z-index: 200; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .streak-dots { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+  .dot.filled { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot.today { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+
+  .loading { text-align: center; color: var(--dim); font-size: 11px; letter-spacing: 2px; padding: 20px; animation: pulse 1.5s infinite; }
+  .empty { text-align: center; color: var(--dim); font-size: 11px; letter-spacing: 1px; padding: 24px; }
+
+  .checkin-btn {
+    width: 100%; height: 100px; border: 2px solid var(--green); border-radius: 8px;
+    background: rgba(0,255,153,0.05); color: var(--green); font-family: inherit;
+    font-size: 16px; font-weight: bold; letter-spacing: 3px; text-transform: uppercase;
+    cursor: pointer; transition: all 0.2s; margin-bottom: 12px;
+  }
+  .checkin-btn:hover { background: rgba(0,255,153,0.12); }
+  .checkin-btn.done { border-color: var(--dim); color: var(--dim); background: transparent; cursor: default; }
+
+  .sub-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+  .sub-tab {
+    flex: 1; padding: 8px; background: transparent; border: 1px solid var(--border);
+    border-radius: 4px; color: var(--dim); font-family: inherit; font-size: 10px;
+    letter-spacing: 1px; cursor: pointer; transition: all 0.2s;
+  }
+  .sub-tab.active { border-color: var(--cyan); color: var(--cyan); background: rgba(0,212,255,0.05); }
+
+  /* set password modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(2,10,20,0.92);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 600; padding: 24px;
+  }
+  .modal-box {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 24px; width: 100%; max-width: 320px;
+  }
+  .modal-title { font-size: 11px; letter-spacing: 3px; color: var(--cyan); margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN SCREEN ══ -->
+<div id="login-screen">
+  <div class="login-title">GymOS</div>
+
+  <!-- Password bar -->
+  <div class="pw-bar-wrap">
+    <input type="text" class="pw-bar" id="pw-input" placeholder="access code"
+      autocomplete="off" autocorrect="off" spellcheck="false">
+  </div>
+  <div class="login-error" id="login-error"></div>
+
+  <!-- Biometric icon -->
+  <button class="bio-btn" id="bio-btn" onclick="tryBiometric()">
+    <span id="bio-icon">⬡</span>
+    <span class="bio-label" id="bio-label">biometric</span>
+  </button>
+  <div class="bio-scanning" id="bio-scanning">◈ scanning ◈</div>
+
+</div>
+
+
+<!-- Change password modal (inside app only) -->
+<div class="modal-overlay" id="set-pw-modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title">Change Password</div>
+    <div class="input-group">
+      <div class="input-label">New Password</div>
+      <input type="password" id="new-pw1" placeholder="Enter new password">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Confirm</div>
+      <input type="password" id="new-pw2" placeholder="Confirm new password">
+    </div>
+    <div class="login-error" id="set-pw-error"></div>
+    <button class="btn btn-cyan" style="margin-top:8px" onclick="confirmSetPassword()">Save Password</button>
+    <button class="btn btn-green" onclick="document.getElementById('set-pw-modal').style.display='none';registerBiometric()" id="reg-bio-btn">Register Biometric This Device</button>
+    <button class="btn" style="background:transparent;border:1px solid var(--border);color:var(--dim)" onclick="document.getElementById('set-pw-modal').style.display='none'">Cancel</button>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div id="app">
+
+  <div class="header">
+    <div class="header-left">
+      <button class="header-back" onclick="window.location.href='https://nathanwa2.github.io/projects/'">⬅ Hub</button>
+      <div class="header-title">GymOS</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <button onclick="showSetPassword()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:14px;padding:4px" title="Change password">⚙</button>
+      <button onclick="doLogout()" style="background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;font-size:9px;letter-spacing:1px;padding:4px 8px;border-radius:3px;font-family:inherit" title="Lock">LOCK</button>
+      <div class="header-status">
+        <div class="pulse-dot"></div>
+        <span id="hdr-date">--</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- HOME -->
+    <div class="tab active" id="tab-home">
+      <div class="section-hdr">Today</div>
+      <div class="card green">
+        <div class="card-label">BasicFit Streak</div>
+        <div class="card-value" id="home-streak">–</div>
+        <div class="card-sub" id="home-streak-sub">calculating…</div>
+        <div class="streak-dots" id="home-dots"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">Bench Press — Goal 110 kg</div>
+        <div class="bench-wrap">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#0d2137" stroke-width="6"/>
+            <circle id="bench-arc" cx="40" cy="40" r="34" fill="none"
+              stroke="#00d4ff" stroke-width="6" stroke-linecap="round"
+              stroke-dasharray="213.6" stroke-dashoffset="213.6"
+              transform="rotate(-90 40 40)" style="transition:stroke-dashoffset 0.8s ease"/>
+          </svg>
+          <div>
+            <div class="bench-pct" id="bench-pct">0%</div>
+            <div class="bench-goal-label">LAST: <span id="bench-current">–</span> KG</div>
+            <div class="bench-goal-label" style="margin-top:4px">BEST: <span id="bench-best">–</span> KG</div>
+          </div>
+        </div>
+      </div>
+      <div class="section-hdr">Today's Nutrition</div>
+      <div class="card orange">
+        <div class="card-label">Calories</div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <div class="card-value" id="home-kcal">–</div>
+          <div class="card-sub">/ 2500 kcal</div>
+        </div>
+        <div style="margin-top:10px">
+          <div class="macro-bar-track">
+            <div class="macro-bar-fill" id="home-kcal-bar" style="width:0%;background:var(--orange)"></div>
+          </div>
+        </div>
+      </div>
+      <div class="grid3">
+        <div class="card green" style="padding:12px">
+          <div class="card-label">Protein</div>
+          <div class="card-value" style="font-size:20px" id="home-protein">–</div>
+          <div class="card-sub">/ 180g</div>
+        </div>
+        <div class="card" style="padding:12px">
+          <div class="card-label">Carbs</div>
+          <div class="card-value" style="font-size:20px" id="home-carbs">–</div>
+          <div class="card-sub">/ 280g</div>
+        </div>
+        <div class="card purple" style="padding:12px">
+          <div class="card-label">Fat</div>
+          <div class="card-value" style="font-size:20px;color:var(--purple)" id="home-fat">–</div>
+          <div class="card-sub">/ 70g</div>
+        </div>
+      </div>
+      <div class="section-hdr">Last Session</div>
+      <div class="card purple" id="home-last-lift"><div class="loading">Loading…</div></div>
+    </div>
+
+    <!-- CHECK-IN -->
+    <div class="tab" id="tab-checkin">
+      <div class="section-hdr">BasicFit Check-in</div>
+      <button class="checkin-btn" id="checkin-btn" onclick="doCheckin()">⚡ Check In Now</button>
+      <div class="card green">
+        <div class="card-label">This Week</div>
+        <div class="card-value" id="ci-week">–</div>
+        <div class="card-sub">sessions</div>
+      </div>
+      <div class="card">
+        <div class="card-label">This Month</div>
+        <div class="card-value" id="ci-month">–</div>
+        <div class="card-sub">sessions</div>
+      </div>
+      <div class="card orange">
+        <div class="card-label">All Time</div>
+        <div class="card-value" id="ci-total">–</div>
+        <div class="card-sub">total check-ins</div>
+      </div>
+      <div class="section-hdr">Recent</div>
+      <div class="card" id="ci-list"><div class="loading">Loading…</div></div>
+    </div>
+
+    <!-- FOOD -->
+    <div class="tab" id="tab-food">
+      <div class="section-hdr">Log Food</div>
+      <div class="sub-tabs">
+        <button class="sub-tab active" onclick="foodSubTab('log',this)">Log</button>
+        <button class="sub-tab" onclick="foodSubTab('today',this)">Today</button>
+        <button class="sub-tab" onclick="foodSubTab('history',this)">History</button>
+      </div>
+      <div id="food-sub-log">
+        <div class="input-group">
+          <div class="input-label">Meal</div>
+          <select id="food-meal">
+            <option>Breakfast</option><option>Lunch</option><option>Dinner</option>
+            <option>Snack</option><option>Pre-workout</option><option>Post-workout</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <div class="input-label">Food Name</div>
+          <input type="text" id="food-name" placeholder="e.g. Chicken breast 200g">
+        </div>
+        <div class="grid2">
+          <div class="input-group"><div class="input-label">Calories</div><input type="number" id="food-kcal" placeholder="0" min="0"></div>
+          <div class="input-group"><div class="input-label">Protein (g)</div><input type="number" id="food-protein" placeholder="0" min="0"></div>
+        </div>
+        <div class="grid2">
+          <div class="input-group"><div class="input-label">Carbs (g)</div><input type="number" id="food-carbs" placeholder="0" min="0"></div>
+          <div class="input-group"><div class="input-label">Fat (g)</div><input type="number" id="food-fat" placeholder="0" min="0"></div>
+        </div>
+        <button class="btn btn-orange" onclick="logFood()">Log Meal</button>
+      </div>
+      <div id="food-sub-today" style="display:none">
+        <div class="card orange">
+          <div class="card-label">Calories Today</div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <div class="card-value" id="food-today-kcal">–</div>
+            <div class="card-sub">/ 2500</div>
+          </div>
+          <div style="margin-top:10px"><div class="macro-bar-track"><div class="macro-bar-fill" id="food-kcal-bar2" style="width:0%;background:var(--orange)"></div></div></div>
+        </div>
+        <div id="food-macros-detail"></div>
+        <div class="section-hdr">Meals</div>
+        <div class="card" id="food-today-list"><div class="loading">Loading…</div></div>
+      </div>
+      <div id="food-sub-history" style="display:none">
+        <div class="card" id="food-history-list"><div class="loading">Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- LIFTS -->
+    <div class="tab" id="tab-lifts">
+      <div class="section-hdr">Log Lift</div>
+      <div class="input-group">
+        <div class="input-label">Exercise</div>
+        <select id="lift-exercise">
+          <option>Bench Press</option><option>Squat</option><option>Deadlift</option>
+          <option>OHP</option><option>Cable Row</option><option>Lat Pulldown</option>
+          <option>Incline Bench</option><option>Tricep Pushdown</option>
+          <option>Bicep Curl</option><option>Leg Press</option><option>Leg Extension</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div id="lift-custom-wrap" style="display:none" class="input-group">
+        <div class="input-label">Exercise Name</div>
+        <input type="text" id="lift-custom" placeholder="Exercise name">
+      </div>
+      <div class="grid3">
+        <div class="input-group"><div class="input-label">Weight (kg)</div><input type="number" id="lift-weight" placeholder="0" min="0" step="0.5"></div>
+        <div class="input-group"><div class="input-label">Sets</div><input type="number" id="lift-sets" value="3" min="1"></div>
+        <div class="input-group"><div class="input-label">Reps</div><input type="number" id="lift-reps" value="8" min="1"></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Notes (optional)</div>
+        <input type="text" id="lift-notes" placeholder="e.g. felt strong today">
+      </div>
+      <button class="btn btn-cyan" onclick="logLift()">Log Lift</button>
+      <div class="section-hdr">History</div>
+      <div class="card" id="lift-list"><div class="loading">Loading…</div></div>
+    </div>
+
+  </div>
+
+  <nav class="nav">
+    <button class="nav-btn active" id="nav-home" onclick="goTab('home')"><span>⚡</span>HOME</button>
+    <button class="nav-btn" id="nav-checkin" onclick="goTab('checkin')"><span>🏋️</span>GYM</button>
+    <button class="nav-btn" id="nav-food" onclick="goTab('food')"><span>🥗</span>FOOD</button>
+    <button class="nav-btn" id="nav-lifts" onclick="goTab('lifts')"><span>📈</span>LIFTS</button>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, Timestamp,
+  doc, getDoc, setDoc }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD3xCzgZsKtXdBIWFohc_Zyg2a_yXPIdEQ",
+  authDomain: "gym-progress-dfc8f.firebaseapp.com",
+  projectId: "gym-progress-dfc8f",
+  storageBucket: "gym-progress-dfc8f.firebasestorage.app",
+  messagingSenderId: "196914679269",
+  appId: "1:196914679269:web:0e96e1c9aec3379c4bb30c"
+};
+
+const BENCH_GOAL=110, KCAL_GOAL=2500, PROTEIN_GOAL=180, CARBS_GOAL=280, FAT_GOAL=70;
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+const todayStr = () => new Date().toISOString().slice(0,10);
+const pct = (v,g) => Math.min(100, Math.round((v/g)*100));
+
+// ── TOAST ──
+function toast(msg, col='var(--cyan)') {
+  const el = document.getElementById('toast');
+  el.textContent=msg; el.style.borderColor=col; el.style.color=col;
+  el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ══════════════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════════════
+
+const DEFAULT_PW = '123456';
+const AUTH_DOC   = doc(db, 'settings', 'auth'); // password hash synced via Firebase
+
+async function hashPw(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// fetch password hash from Firebase; fall back to default if not set
+async function getStoredHash() {
+  try {
+    const snap = await getDoc(AUTH_DOC);
+    if(snap.exists() && snap.data().pw_hash) return snap.data().pw_hash;
+  } catch(e) { /* offline — fall through to default */ }
+  return await hashPw(DEFAULT_PW);
+}
+
+function unlock() {
+  const ls = document.getElementById('login-screen');
+  ls.classList.add('unlocking');
+  setTimeout(()=>{
+    ls.style.display='none';
+    document.getElementById('app').classList.add('visible');
+    loadHome();
+  }, 500);
+}
+
+// session valid 8 hours
+function checkSession() {
+  const exp = localStorage.getItem('gymOS_session');
+  if(exp && Date.now() < parseInt(exp)) { unlock(); return true; }
+  return false;
+}
+function setSession() {
+  localStorage.setItem('gymOS_session', Date.now() + 28800000);
+}
+
+// ── PASSWORD (shows * not dots) ──
+let _realPw = '';
+const pwInput = document.getElementById('pw-input');
+pwInput.addEventListener('keydown', e => {
+  if(e.key === 'Enter') { submitPw(); return; }
+  if(e.key === 'Backspace') { _realPw = _realPw.slice(0,-1); }
+  else if(e.key.length === 1 && !e.ctrlKey && !e.metaKey) { _realPw += e.key; }
+  else return;
+  e.preventDefault();
+  pwInput.value = '*'.repeat(_realPw.length);
+});
+pwInput.addEventListener('paste', e => e.preventDefault());
+
+window.submitPw = async function() {
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  if(!_realPw) return;
+  const [inputHash, storedHash] = await Promise.all([hashPw(_realPw), getStoredHash()]);
+  if(inputHash === storedHash) {
+    pwInput.classList.add('success');
+    setSession(); setTimeout(unlock, 400);
+  } else {
+    pwInput.classList.add('shake');
+    errEl.textContent = 'access denied';
+    setTimeout(()=>{ pwInput.classList.remove('shake'); _realPw=''; pwInput.value=''; }, 400);
+  }
+};
+
+// ── LOGOUT ──
+window.doLogout = function() {
+  localStorage.removeItem('gymOS_session');
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('app').style.display='none';
+  const ls = document.getElementById('login-screen');
+  ls.style.display='flex'; ls.style.opacity='1';
+  ls.classList.remove('unlocking');
+  _realPw=''; pwInput.value='';
+  document.getElementById('login-error').textContent='';
+  pwInput.className = 'pw-bar'; // hard reset — removes success/shake/any class
+  pwInput.style.color = 'var(--cyan)';
+};
+
+// ── CHANGE PASSWORD — saves to Firebase, syncs all devices ──
+window.showSetPassword = function() {
+  document.getElementById('set-pw-modal').style.display='flex';
+};
+
+window.confirmSetPassword = async function() {
+  const p1  = document.getElementById('new-pw1').value;
+  const p2  = document.getElementById('new-pw2').value;
+  const err = document.getElementById('set-pw-error');
+  err.textContent='';
+  if(!p1) { err.textContent='Enter a password'; return; }
+  if(p1 !== p2) { err.textContent="Passwords don't match"; return; }
+  try {
+    await setDoc(AUTH_DOC, { pw_hash: await hashPw(p1) }, { merge: true });
+    document.getElementById('set-pw-modal').style.display='none';
+    document.getElementById('new-pw1').value='';
+    document.getElementById('new-pw2').value='';
+    toast('✓ Password updated on all devices','var(--green)');
+  } catch(e) { err.textContent='Save failed: '+e.message; }
+};
+
+// ── BIOMETRICS (WebAuthn — per device fast unlock) ──
+const BIO_KEY = 'gymOS_bio_cred';
+
+window.tryBiometric = async function() {
+  const btn    = document.getElementById('bio-btn');
+  const scanEl = document.getElementById('bio-scanning');
+  const errEl  = document.getElementById('login-error');
+  errEl.textContent='';
+  if(!window.PublicKeyCredential) { errEl.textContent='biometrics not supported'; return; }
+  const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
+  if(!available) { errEl.textContent='no sensor — use password'; return; }
+  const storedCred = localStorage.getItem(BIO_KEY);
+
+  if(!storedCred) {
+    // first time: register on this device
+    btn.disabled=true; scanEl.style.display='block';
+    document.getElementById('bio-label').textContent='registering…';
+    try {
+      const cred = await navigator.credentials.create({ publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        rp: { name:'GymOS', id: location.hostname },
+        user: { id: new TextEncoder().encode('nathan'), name:'nathan', displayName:'Nathan' },
+        pubKeyCredParams: [{ type:'public-key', alg:-7 },{ type:'public-key', alg:-257 }],
+        authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required' },
+        timeout: 60000
+      }});
+      localStorage.setItem(BIO_KEY, btoa(String.fromCharCode(...new Uint8Array(cred.rawId))));
+      setSession(); scanEl.style.display='none';
+      document.getElementById('bio-icon').textContent='✓';
+      setTimeout(unlock, 500);
+    } catch(e) {
+      scanEl.style.display='none'; btn.disabled=false;
+      document.getElementById('bio-label').textContent='biometric';
+      if(e.name!=='NotAllowedError') errEl.textContent='failed — use password';
+    }
+    return;
+  }
+
+  // authenticate
+  btn.disabled=true; scanEl.style.display='block';
+  try {
+    const rawId = Uint8Array.from(atob(storedCred), c=>c.charCodeAt(0));
+    await navigator.credentials.get({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rpId: location.hostname,
+      allowCredentials: [{ type:'public-key', id: rawId }],
+      userVerification: 'required',
+      timeout: 60000
+    }});
+    setSession(); scanEl.style.display='none';
+    document.getElementById('bio-icon').textContent='✓';
+    setTimeout(unlock, 400);
+  } catch(e) {
+    scanEl.style.display='none'; btn.disabled=false;
+    if(e.name!=='NotAllowedError') errEl.textContent='auth failed — use password';
+  }
+};
+
+// boot — hide bio button on login unless already registered on this device
+(async ()=>{
+  if(checkSession()) return;
+  const bioBtn = document.getElementById('bio-btn');
+  const hasCred = !!localStorage.getItem(BIO_KEY);
+  if(!hasCred || !window.PublicKeyCredential) { bioBtn.style.display='none'; return; }
+  const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
+  if(!available) { bioBtn.style.display='none'; return; }
+  const isIOS = /iPhone|iPad/.test(navigator.userAgent);
+  const isMac = /Mac/.test(navigator.userAgent) && !isIOS;
+  document.getElementById('bio-icon').textContent  = isIOS ? '👤' : isMac ? '☝️' : '🔏';
+  document.getElementById('bio-label').textContent = isIOS ? 'face / touch id' : isMac ? 'touch id' : 'fingerprint';
+})();
+
+// register biometric — called from inside the app only
+window.registerBiometric = async function() {
+  if(!window.PublicKeyCredential) { toast('Biometrics not supported','var(--red)'); return; }
+  const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
+  if(!available) { toast('No biometric sensor found','var(--red)'); return; }
+  if(localStorage.getItem(BIO_KEY)) {
+    // already registered — ask to re-register
+    if(!confirm('Biometric already registered on this device. Re-register?')) return;
+  }
+  try {
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp: { name:'GymOS', id: location.hostname },
+      user: { id: new TextEncoder().encode('nathan'), name:'nathan', displayName:'Nathan' },
+      pubKeyCredParams: [{ type:'public-key', alg:-7 },{ type:'public-key', alg:-257 }],
+      authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required' },
+      timeout: 60000
+    }});
+    localStorage.setItem(BIO_KEY, btoa(String.fromCharCode(...new Uint8Array(cred.rawId))));
+    toast('✓ Biometric registered on this device','var(--green)');
+  } catch(e) {
+    if(e.name !== 'NotAllowedError') toast('Registration failed: '+e.message,'var(--red)');
+  }
+};
+
+// ══════════════════════════════════════════════════════
+//  APP
+// ══════════════════════════════════════════════════════
+
+document.getElementById('hdr-date').textContent =
+  new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short'}).toUpperCase();
+
+window.goTab = function(name) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  if(name==='checkin') loadCheckin();
+  if(name==='food')    loadFoodToday();
+  if(name==='lifts')   loadLifts();
+};
+
+window.foodSubTab = function(name, btn) {
+  document.querySelectorAll('.sub-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('food-sub-log').style.display     = name==='log'     ? '' : 'none';
+  document.getElementById('food-sub-today').style.display   = name==='today'   ? '' : 'none';
+  document.getElementById('food-sub-history').style.display = name==='history' ? '' : 'none';
+  if(name==='today')   loadFoodToday();
+  if(name==='history') loadFoodHistory();
+};
+
+// ── CHECK-IN ──
+window.doCheckin = async function() {
+  const today=todayStr();
+  const btn=document.getElementById('checkin-btn');
+  const snap=await getDocs(query(collection(db,'check_ins'),where('date','==',today)));
+  if(!snap.empty){toast('Already checked in today!','var(--dim)');return;}
+  btn.disabled=true;
+  try {
+    await addDoc(collection(db,'check_ins'),{date:today,ts:Timestamp.now()});
+    toast('✓ Checked in!','var(--green)'); loadCheckin(); loadHome();
+  } catch(e){toast('Error: '+e.message,'var(--red)');}
+  btn.disabled=false;
+};
+
+async function loadCheckin(){
+  const btn=document.getElementById('checkin-btn');
+  const today=todayStr();
+  const allSnap=await getDocs(query(collection(db,'check_ins'),orderBy('date','desc')));
+  const all=allSnap.docs.map(d=>d.data().date);
+  const checkedToday=all.includes(today);
+  if(checkedToday){btn.textContent='✓ Checked In Today';btn.classList.add('done');btn.onclick=null;}
+  else{btn.textContent='⚡ Check In Now';btn.classList.remove('done');btn.onclick=doCheckin;}
+  const wStart=(()=>{const d=new Date();d.setDate(d.getDate()-d.getDay()+1);return d.toISOString().slice(0,10);})();
+  document.getElementById('ci-week').textContent=all.filter(d=>d>=wStart).length;
+  document.getElementById('ci-month').textContent=all.filter(d=>d>=today.slice(0,7)+'-01').length;
+  document.getElementById('ci-total').textContent=all.length;
+  const listEl=document.getElementById('ci-list');
+  const recent=all.slice(0,10);
+  if(!recent.length){listEl.innerHTML='<div class="empty">No check-ins yet</div>';return;}
+  listEl.innerHTML=recent.map((d,i)=>`
+    <div class="log-item">
+      <div class="log-item-left">${d}</div>
+      <div class="log-item-right" style="color:var(--green)">${i===0&&d===today?'TODAY':''}</div>
+    </div>`).join('');
+}
+
+// ── FOOD ──
+window.logFood = async function(){
+  const meal=document.getElementById('food-meal').value;
+  const name=document.getElementById('food-name').value.trim();
+  const kcal=parseFloat(document.getElementById('food-kcal').value)||0;
+  const protein=parseFloat(document.getElementById('food-protein').value)||0;
+  const carbs=parseFloat(document.getElementById('food-carbs').value)||0;
+  const fat=parseFloat(document.getElementById('food-fat').value)||0;
+  if(!name){toast('Enter a food name','var(--orange)');return;}
+  try {
+    await addDoc(collection(db,'food_logs'),{date:todayStr(),meal,name,kcal,protein,carbs,fat,ts:Timestamp.now()});
+    toast('✓ Meal logged','var(--green)');
+    ['food-name','food-kcal','food-protein','food-carbs','food-fat'].forEach(id=>document.getElementById(id).value='');
+    loadHome();
+  } catch(e){toast('Error: '+e.message,'var(--red)');}
+};
+
+async function getTodayMacros(){
+  const snap=await getDocs(query(collection(db,'food_logs'),where('date','==',todayStr())));
+  let kcal=0,protein=0,carbs=0,fat=0;const meals=[];
+  snap.forEach(d=>{const v=d.data();kcal+=v.kcal;protein+=v.protein;carbs+=v.carbs;fat+=v.fat;meals.push(v);});
+  return{kcal,protein,carbs,fat,meals};
+}
+
+async function loadFoodToday(){
+  const{kcal,protein,carbs,fat,meals}=await getTodayMacros();
+  document.getElementById('food-today-kcal').textContent=Math.round(kcal);
+  document.getElementById('food-kcal-bar2').style.width=pct(kcal,KCAL_GOAL)+'%';
+  document.getElementById('food-macros-detail').innerHTML=`
+    <div class="grid3" style="margin-top:8px">
+      <div class="card green" style="padding:12px"><div class="card-label">Protein</div>
+        <div class="card-value" style="font-size:20px">${Math.round(protein)}g</div><div class="card-sub">/ ${PROTEIN_GOAL}g</div></div>
+      <div class="card" style="padding:12px"><div class="card-label">Carbs</div>
+        <div class="card-value" style="font-size:20px">${Math.round(carbs)}g</div><div class="card-sub">/ ${CARBS_GOAL}g</div></div>
+      <div class="card purple" style="padding:12px"><div class="card-label">Fat</div>
+        <div class="card-value" style="font-size:20px;color:var(--purple)">${Math.round(fat)}g</div><div class="card-sub">/ ${FAT_GOAL}g</div></div>
+    </div>`;
+  const listEl=document.getElementById('food-today-list');
+  if(!meals.length){listEl.innerHTML='<div class="empty">Nothing logged today</div>';return;}
+  listEl.innerHTML=meals.sort((a,b)=>(a.ts?.seconds||0)-(b.ts?.seconds||0)).map(m=>`
+    <div class="log-item">
+      <div class="log-item-left">${m.name}<div class="log-item-sub">${m.meal}</div></div>
+      <div class="log-item-right">${m.kcal} kcal<div class="log-item-sub">${m.protein}p / ${m.carbs}c / ${m.fat}f</div></div>
+    </div>`).join('');
+}
+
+async function loadFoodHistory(){
+  const snap=await getDocs(query(collection(db,'food_logs'),orderBy('date','desc'),limit(50)));
+  const listEl=document.getElementById('food-history-list');
+  if(snap.empty){listEl.innerHTML='<div class="empty">No history yet</div>';return;}
+  const byDate={};
+  snap.forEach(d=>{const v=d.data();(byDate[v.date]=byDate[v.date]||[]).push(v);});
+  listEl.innerHTML=Object.entries(byDate).map(([date,items])=>`
+    <div class="log-item">
+      <div class="log-item-left">${date}<div class="log-item-sub">${items.length} meals</div></div>
+      <div class="log-item-right" style="color:var(--orange)">${Math.round(items.reduce((s,i)=>s+i.kcal,0))} kcal</div>
+    </div>`).join('');
+}
+
+// ── LIFTS ──
+document.getElementById('lift-exercise').addEventListener('change',function(){
+  document.getElementById('lift-custom-wrap').style.display=this.value==='Other'?'':'none';
+});
+
+window.logLift = async function(){
+  const sel=document.getElementById('lift-exercise').value;
+  const exercise=sel==='Other'?document.getElementById('lift-custom').value.trim():sel;
+  const weight=parseFloat(document.getElementById('lift-weight').value)||0;
+  const sets=parseInt(document.getElementById('lift-sets').value)||0;
+  const reps=parseInt(document.getElementById('lift-reps').value)||0;
+  const notes=document.getElementById('lift-notes').value.trim();
+  if(!exercise||!weight){toast('Fill in exercise & weight','var(--orange)');return;}
+  try {
+    await addDoc(collection(db,'lift_logs'),{date:todayStr(),exercise,weight_kg:weight,sets,reps,notes,ts:Timestamp.now()});
+    toast('✓ Lift logged','var(--cyan)');
+    document.getElementById('lift-weight').value='';
+    document.getElementById('lift-notes').value='';
+    loadLifts(); loadHome();
+  } catch(e){toast('Error: '+e.message,'var(--red)');}
+};
+
+async function loadLifts(){
+  const snap=await getDocs(query(collection(db,'lift_logs'),orderBy('date','desc'),orderBy('ts','desc'),limit(30)));
+  const listEl=document.getElementById('lift-list');
+  if(snap.empty){listEl.innerHTML='<div class="empty">No lifts yet</div>';return;}
+  listEl.innerHTML=snap.docs.map(d=>{const v=d.data();return`
+    <div class="log-item">
+      <div class="log-item-left">${v.exercise}<div class="log-item-sub">${v.date}${v.notes?' · '+v.notes:''}</div></div>
+      <div class="log-item-right" style="color:var(--cyan)">${v.weight_kg} kg<div class="log-item-sub">${v.sets}×${v.reps}</div></div>
+    </div>`;}).join('');
+}
+
+// ── HOME ──
+async function loadHome(){
+  const today=todayStr();
+  // streak
+  const ciSnap=await getDocs(query(collection(db,'check_ins'),orderBy('date','desc')));
+  const ciSet=new Set(ciSnap.docs.map(d=>d.data().date));
+  let streak=0,cur=new Date();cur.setHours(0,0,0,0);
+  if(!ciSet.has(today))cur.setDate(cur.getDate()-1);
+  while(ciSet.has(cur.toISOString().slice(0,10))){streak++;cur.setDate(cur.getDate()-1);}
+  document.getElementById('home-streak').textContent=streak;
+  document.getElementById('home-streak-sub').textContent=ciSet.has(today)?'checked in today ✓':'not checked in today';
+  document.getElementById('home-dots').innerHTML=Array.from({length:7},(_,i)=>{
+    const d=new Date();d.setDate(d.getDate()-(6-i));const ds=d.toISOString().slice(0,10);
+    return`<div class="dot ${ds===today?'today':ciSet.has(ds)?'filled':''}"></div>`;
+  }).join('');
+  // bench
+  const benchSnap=await getDocs(query(collection(db,'lift_logs'),where('exercise','==','Bench Press'),orderBy('date','desc'),limit(20)));
+  let bestBench=0,lastBench=0;
+  benchSnap.docs.forEach((d,i)=>{const v=d.data();if(v.weight_kg>bestBench)bestBench=v.weight_kg;if(i===0)lastBench=v.weight_kg;});
+  const benchPct=pct(bestBench,BENCH_GOAL);
+  document.getElementById('bench-pct').textContent=benchPct+'%';
+  document.getElementById('bench-current').textContent=lastBench||'–';
+  document.getElementById('bench-best').textContent=bestBench||'–';
+  document.getElementById('bench-arc').style.strokeDashoffset=213.6-(213.6*benchPct/100);
+  // macros
+  const{kcal,protein,carbs,fat}=await getTodayMacros();
+  document.getElementById('home-kcal').textContent=Math.round(kcal);
+  document.getElementById('home-protein').textContent=Math.round(protein)+'g';
+  document.getElementById('home-carbs').textContent=Math.round(carbs)+'g';
+  document.getElementById('home-fat').textContent=Math.round(fat)+'g';
+  document.getElementById('home-kcal-bar').style.width=pct(kcal,KCAL_GOAL)+'%';
+  // last lift
+  const liftSnap=await getDocs(query(collection(db,'lift_logs'),orderBy('date','desc'),orderBy('ts','desc'),limit(5)));
+  const lastLiftEl=document.getElementById('home-last-lift');
+  if(liftSnap.empty){lastLiftEl.innerHTML='<div class="empty">No lifts logged yet</div>';return;}
+  const lifts=liftSnap.docs.map(d=>d.data());
+  const lastDate=lifts[0].date;
+  lastLiftEl.innerHTML=`<div class="card-label">${lastDate}</div>`
+    +lifts.filter(l=>l.date===lastDate).map(l=>`
+      <div class="log-item">
+        <div class="log-item-left">${l.exercise}</div>
+        <div class="log-item-right" style="color:var(--purple)">${l.weight_kg}kg ${l.sets}×${l.reps}</div>
+      </div>`).join('');
+}
+</script>
+</body>
+</html>
