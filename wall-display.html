@@ -375,9 +375,93 @@
       border: 1px solid rgba(0, 212, 255, 0.12);
       border-radius: 2px;
     }
+
+    /* ── LOGIN OVERLAY ── */
+    #login-overlay {
+      position: fixed; inset: 0; z-index: 9000;
+      background: #020a14;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    #login-overlay.hide {
+      animation: fadeOut 0.6s ease forwards;
+    }
+    @keyframes fadeOut { to { opacity: 0; pointer-events: none; } }
+
+    .lo-title {
+      font-size: clamp(36px, 6vw, 72px);
+      font-weight: bold; color: var(--cyan);
+      letter-spacing: 14px; text-transform: uppercase;
+      text-shadow: 0 0 50px rgba(0,212,255,0.35);
+      margin-bottom: 10px;
+    }
+    .lo-sub {
+      font-size: 10px; letter-spacing: 5px; color: #1a3a52;
+      text-transform: uppercase; margin-bottom: 56px;
+    }
+    .lo-bar-wrap {
+      width: min(300px, 80vw);
+      border-bottom: 1px solid var(--cyan);
+      display: flex; align-items: center;
+      margin-bottom: 4px;
+    }
+    .lo-input {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: var(--cyan); font-family: inherit;
+      font-size: 24px; letter-spacing: 8px;
+      text-align: center; padding: 12px 0;
+      caret-color: var(--cyan);
+    }
+    .lo-input::placeholder { color: #1a3a52; font-size: 13px; letter-spacing: 4px; }
+    .lo-input.shake { animation: loShake 0.3s ease; }
+    .lo-input.ok    { color: var(--green); }
+    @keyframes loShake {
+      0%,100%{transform:translateX(0)} 25%{transform:translateX(-10px)} 75%{transform:translateX(10px)}
+    }
+    .lo-error {
+      font-size: 9px; color: #ff3b5c; letter-spacing: 3px;
+      text-align: center; height: 14px; margin-bottom: 36px;
+      text-transform: uppercase;
+    }
+    .lo-bio {
+      background: none; border: none; color: #1a3a52;
+      font-size: 30px; cursor: pointer; transition: all 0.2s;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      padding: 8px;
+    }
+    .lo-bio:hover { color: var(--cyan); filter: drop-shadow(0 0 8px var(--cyan)); }
+    .lo-bio-label { font-size: 8px; letter-spacing: 2px; color: #1a3a52; text-transform: uppercase; font-family: inherit; }
+    .lo-scanning {
+      font-size: 9px; color: var(--cyan); letter-spacing: 3px;
+      text-align: center; margin-top: 8px; display: none;
+      animation: loPulse 1s infinite;
+    }
+    @keyframes loPulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    /* hide main content until logged in */
+    #main-content { display: none; }
   </style>
 </head>
 <body>
+
+  <!-- LOGIN OVERLAY -->
+  <div id="login-overlay">
+    <div class="lo-title">Nathan</div>
+    <div class="lo-sub">Command Center</div>
+    <div class="lo-bar-wrap">
+      <input type="text" class="lo-input" id="lo-input" placeholder="access code"
+        autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div class="lo-error" id="lo-error"></div>
+    <button class="lo-bio" id="lo-bio" onclick="loBiometric()">
+      <span id="lo-bio-icon">⬡</span>
+      <span class="lo-bio-label" id="lo-bio-label">biometric</span>
+    </button>
+    <div class="lo-scanning" id="lo-scanning">◈ scanning ◈</div>
+  </div>
+
+  <!-- MAIN CONTENT (hidden until login) -->
+  <div id="main-content">
 
   <!-- Corner decorations -->
   <div class="corner corner-tl"></div>
@@ -665,6 +749,153 @@
 
     canvas.addEventListener("click", startMic);
     simLoop();
+  </script>
+
+  </div><!-- /main-content -->
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD3xCzgZsKtXdBIWFohc_Zyg2a_yXPIdEQ",
+      authDomain: "gym-progress-dfc8f.firebaseapp.com",
+      projectId: "gym-progress-dfc8f",
+      storageBucket: "gym-progress-dfc8f.firebasestorage.app",
+      messagingSenderId: "196914679269",
+      appId: "1:196914679269:web:0e96e1c9aec3379c4bb30c"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+    const AUTH_DOC  = doc(db, 'settings', 'auth');
+    const DEFAULT_PW = '123456';
+    const SESSION_KEY = 'gymOS_session';
+    const BIO_KEY     = 'gymOS_bio_cred';
+
+    async function hashPw(pw) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+
+    async function getStoredHash() {
+      try {
+        const snap = await getDoc(AUTH_DOC);
+        if(snap.exists() && snap.data().pw_hash) return snap.data().pw_hash;
+      } catch(e) {}
+      return await hashPw(DEFAULT_PW);
+    }
+
+    function unlockSite() {
+      localStorage.setItem(SESSION_KEY, Date.now() + 28800000); // 8 hours
+      const overlay = document.getElementById('login-overlay');
+      overlay.classList.add('hide');
+      setTimeout(()=>{ overlay.style.display='none'; }, 600);
+      document.getElementById('main-content').style.display='block';
+    }
+
+    // check existing session
+    const exp = localStorage.getItem(SESSION_KEY);
+    if(exp && Date.now() < parseInt(exp)) {
+      document.getElementById('login-overlay').style.display='none';
+      document.getElementById('main-content').style.display='block';
+    }
+
+    // ── PASSWORD (star masking) ──
+    let _realPw = '';
+    const loInput = document.getElementById('lo-input');
+    loInput.addEventListener('keydown', e => {
+      if(e.key === 'Enter') { loSubmit(); return; }
+      if(e.key === 'Backspace') { _realPw = _realPw.slice(0,-1); }
+      else if(e.key.length === 1 && !e.ctrlKey && !e.metaKey) { _realPw += e.key; }
+      else return;
+      e.preventDefault();
+      loInput.value = '*'.repeat(_realPw.length);
+    });
+    loInput.addEventListener('paste', e => e.preventDefault());
+
+    async function loSubmit() {
+      const errEl = document.getElementById('lo-error');
+      errEl.textContent='';
+      if(!_realPw) return;
+      const [inputHash, storedHash] = await Promise.all([hashPw(_realPw), getStoredHash()]);
+      if(inputHash === storedHash) {
+        loInput.classList.add('ok');
+        setTimeout(unlockSite, 400);
+      } else {
+        loInput.classList.add('shake');
+        errEl.textContent='access denied';
+        setTimeout(()=>{ loInput.classList.remove('shake'); _realPw=''; loInput.value=''; }, 400);
+      }
+    }
+    window.loSubmit = loSubmit;
+
+    // ── BIOMETRICS ──
+    window.loBiometric = async function() {
+      const btn    = document.getElementById('lo-bio');
+      const scanEl = document.getElementById('lo-scanning');
+      const errEl  = document.getElementById('lo-error');
+      errEl.textContent='';
+      if(!window.PublicKeyCredential) { errEl.textContent='biometrics not supported'; return; }
+      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
+      if(!available) { errEl.textContent='no sensor — use password'; return; }
+      const storedCred = localStorage.getItem(BIO_KEY);
+
+      if(!storedCred) {
+        btn.disabled=true; scanEl.style.display='block';
+        document.getElementById('lo-bio-label').textContent='registering…';
+        try {
+          const cred = await navigator.credentials.create({ publicKey: {
+            challenge: crypto.getRandomValues(new Uint8Array(32)),
+            rp: { name:'GymOS', id: location.hostname },
+            user: { id: new TextEncoder().encode('nathan'), name:'nathan', displayName:'Nathan' },
+            pubKeyCredParams: [{ type:'public-key', alg:-7 },{ type:'public-key', alg:-257 }],
+            authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required' },
+            timeout: 60000
+          }});
+          localStorage.setItem(BIO_KEY, btoa(String.fromCharCode(...new Uint8Array(cred.rawId))));
+          scanEl.style.display='none';
+          document.getElementById('lo-bio-icon').textContent='✓';
+          setTimeout(unlockSite, 500);
+        } catch(e) {
+          scanEl.style.display='none'; btn.disabled=false;
+          document.getElementById('lo-bio-label').textContent='biometric';
+          if(e.name!=='NotAllowedError') errEl.textContent='failed — use password';
+        }
+        return;
+      }
+
+      btn.disabled=true; scanEl.style.display='block';
+      try {
+        const rawId = Uint8Array.from(atob(storedCred), c=>c.charCodeAt(0));
+        await navigator.credentials.get({ publicKey: {
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          rpId: location.hostname,
+          allowCredentials: [{ type:'public-key', id: rawId }],
+          userVerification: 'required',
+          timeout: 60000
+        }});
+        scanEl.style.display='none';
+        document.getElementById('lo-bio-icon').textContent='✓';
+        setTimeout(unlockSite, 400);
+      } catch(e) {
+        scanEl.style.display='none'; btn.disabled=false;
+        if(e.name!=='NotAllowedError') errEl.textContent='auth failed — use password';
+      }
+    };
+
+    // set bio button label
+    (async ()=>{
+      if(!window.PublicKeyCredential) { document.getElementById('lo-bio').style.display='none'; return; }
+      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
+      if(!available) { document.getElementById('lo-bio').style.display='none'; return; }
+      const hasCred = !!localStorage.getItem(BIO_KEY);
+      const isIOS   = /iPhone|iPad/.test(navigator.userAgent);
+      const isMac   = /Mac/.test(navigator.userAgent) && !isIOS;
+      document.getElementById('lo-bio-icon').textContent  = isIOS ? '👤' : isMac ? '☝️' : '🔏';
+      document.getElementById('lo-bio-label').textContent = hasCred
+        ? (isIOS ? 'face / touch id' : isMac ? 'touch id' : 'fingerprint')
+        : 'register biometric';
+    })();
   </script>
 </body>
 </html>
