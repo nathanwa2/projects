@@ -466,6 +466,7 @@
   <!-- Corner decorations -->
   <div class="corner corner-tl"></div>
   <div class="corner corner-tr"></div>
+  <button onclick="wdLogout()" style="position:fixed;top:14px;right:56px;z-index:200;background:none;border:1px solid rgba(0,212,255,0.18);color:#4a7a99;cursor:pointer;font-size:9px;letter-spacing:1px;padding:4px 10px;border-radius:3px;font-family:inherit;transition:all 0.2s" onmouseover="this.style.color='#00d4ff';this.style.borderColor='rgba(0,212,255,0.5)'" onmouseout="this.style.color='#4a7a99';this.style.borderColor='rgba(0,212,255,0.18)'">LOCK</button>
   <div class="corner corner-bl"></div>
   <div class="corner corner-br"></div>
 
@@ -799,6 +800,17 @@
       document.getElementById('login-overlay').style.display='none';
       document.getElementById('main-content').style.display='block';
     }
+
+    // logout
+    window.wdLogout = function() {
+      localStorage.removeItem(SESSION_KEY);
+      document.getElementById('main-content').style.display='none';
+      const overlay = document.getElementById('login-overlay');
+      overlay.style.display='flex'; overlay.style.opacity='1';
+      overlay.classList.remove('hide');
+      _realPw=''; document.getElementById('lo-input').value='';
+      document.getElementById('lo-error').textContent='';
+    };
 
     // ── PASSWORD (star masking) ──
     let _realPw = '';

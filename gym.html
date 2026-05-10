@@ -309,6 +309,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:12px">
       <button onclick="showSetPassword()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:14px;padding:4px" title="Change password">⚙</button>
+      <button onclick="doLogout()" style="background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;font-size:9px;letter-spacing:1px;padding:4px 8px;border-radius:3px;font-family:inherit" title="Lock">LOCK</button>
       <div class="header-status">
         <div class="pulse-dot"></div>
         <span id="hdr-date">--</span>
@@ -587,6 +588,19 @@ window.submitPw = async function() {
     errEl.textContent = 'access denied';
     setTimeout(()=>{ pwInput.classList.remove('shake'); _realPw=''; pwInput.value=''; }, 400);
   }
+};
+
+// ── LOGOUT ──
+window.doLogout = function() {
+  localStorage.removeItem('gymOS_session');
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('app').style.display='none';
+  const ls = document.getElementById('login-screen');
+  ls.style.display='flex'; ls.style.opacity='1';
+  ls.classList.remove('unlocking');
+  _realPw=''; pwInput.value='';
+  document.getElementById('login-error').textContent='';
+  document.getElementById('pw-input').classList.remove('success','shake');
 };
 
 // ── CHANGE PASSWORD — saves to Firebase, syncs all devices ──
